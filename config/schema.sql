@@ -56,10 +56,9 @@ CREATE TABLE IF NOT EXISTS `oauth_start_tokens` (
   `provider` VARCHAR(64) NOT NULL,
   `state` VARCHAR(128) NOT NULL,
   `client_wpnonce` VARCHAR(255) DEFAULT NULL,
-  `client_server_secret` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME NOT NULL,
   `expires_at` DATETIME NOT NULL,
   `used` TINYINT(1) NOT NULL DEFAULT 0,
-  `client_ip` VARCHAR(45) DEFAULT NULL,
+  -- `client_server_secret` and `client_ip` removed: callback is autosubmit-only
   INDEX (`expires_at`)
 );

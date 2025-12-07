@@ -172,7 +172,7 @@ class OAuthController
                 $db = Database::getConnection();
                     // also fetch the `site` stored with the start token so we can reliably
                     // attribute subsequent callback logs to the correct site_key.
-                    $stmt = $db->prepare('SELECT site, client_wpnonce, client_server_secret FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt = $db->prepare('SELECT site, client_wpnonce FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
                     $stmt->execute([':state' => $state]);
                     $row = $stmt->fetch(\PDO::FETCH_ASSOC);
                     if ($row) {
@@ -199,9 +199,26 @@ class OAuthController
             '_wpnonce' => $wpnonce,
         ];
 
-        // Build the minimal auto-submitting HTML fallback (do not send yet).
-        // This will be returned only if server->server POST is not possible or fails.
-        $html = '<!doctype html><html><head><meta charset="utf-8"><title>OAuth callback</title></head><body>'; 
+        // IMPORTANT: server->server POST to the client callback is disabled by default
+        // to support remote sites that block inbound connections or hosts with
+        // restrictive firewalls. This controller will always return a minimal
+        // auto-submitting HTML form that the browser posts to the client callback.
+        // If you really need server->server POSTs, enable them explicitly by
+        // defining `BRIDGE_ALLOW_SERVER_CALLBACK_POST` to `true` in your bridge
+        // configuration — enabling that is outside the scope of this change and
+        // not recommended unless you control both sides and allow inbound traffic.
+
+        try {
+            Log::record($site ?? null, $provider ?? null, 'oauth_callback_autosubmit', [
+                'has_access_token' => !empty($post['access_token']) ? 1 : 0,
+                'has_refresh_token' => !empty($post['refresh_token']) ? 1 : 0,
+            ]);
+        } catch (\Throwable $e) {
+            // ignore logging errors
+        }
+
+        // Build the minimal auto-submitting HTML and return it to the browser.
+        $html = '<!doctype html><html><head><meta charset="utf-8"><title>OAuth callback</title></head><body>';
         $html .= '<form id="oauthForm" method="POST" action="' . htmlspecialchars($callbackUrl) . '">';
         foreach ($post as $k => $v) {
             $html .= '<input type="hidden" name="' . htmlspecialchars($k) . '" value="' . htmlspecialchars($v) . '">';
@@ -289,25 +306,24 @@ class OAuthController
         $state = bin2hex(random_bytes(16));
         // Accept optional client-provided WP nonce (so the bridge can restore it in browser session)
         $clientWpnonce = $request->post('client_wpnonce', $request->get('client_wpnonce')) ?: ($request->post('_wpnonce', $request->get('_wpnonce')) ?? null);
-        // Accept optional client-provided server secret so the bridge can later POST server->server
-        $clientServerSecret = $request->post('api_key_server', $request->get('api_key_server')) ?: null;
+        // Note: we do not persist a per-token `client_server_secret` anymore.
+        // The bridge validates the calling backend using the provided `api_key_server` but
+        // does not store that secret on a per-start-token basis.
         $created = (new \DateTime('now'))->format('Y-m-d H:i:s');
         $expires = (new \DateTime('now'))->add(new \DateInterval('PT5M'))->format('Y-m-d H:i:s');
-        $clientIp = $_SERVER['REMOTE_ADDR'] ?? null;
+            // client_ip removed: we do not store requester IP in oauth_start_tokens anymore
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, client_server_secret, created_at, expires_at, used, client_ip) VALUES (:token, :site, :provider, :state, :client_wpnonce, :client_server_secret, :created_at, :expires_at, 0, :client_ip)');
+            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
             $stmt->execute([
                 ':token' => $token,
                 ':site' => rtrim((string)$site, '/'),
                 ':provider' => $provider,
                 ':state' => $state,
                 ':client_wpnonce' => $clientWpnonce,
-                ':client_server_secret' => $clientServerSecret,
                 ':created_at' => $created,
                 ':expires_at' => $expires,
-                ':client_ip' => $clientIp,
             ]);
 
             // Log token creation (safe fields only)

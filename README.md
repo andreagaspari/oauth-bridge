@@ -43,7 +43,7 @@ The bridge validates calling sites using a registered `site_url` together with a
 - Add per-site usage pages (calls, errors, quotas)
 - Improve roles and permissions for admin/users
 - Add support for additional providers (Facebook, Microsoft, etc.)
- - Investigate server->server POST 400 in some environments — check client callback reachability, SSL, `client_server_secret` correctness, request headers and proxy/network constraints; consider IP allowlisting or proxying. Keep browser auto-submit fallback as safety.
+ - Investigate server->server POST 400 in some environments — check client callback reachability, SSL, `api_key_server` correctness, request headers and proxy/network constraints; consider IP allowlisting or proxying. Keep browser auto-submit fallback as safety.
 
 ---
 
@@ -106,7 +106,7 @@ Note: the Bridge accepts `site` and `api_key_server` in POST body or query param
 
 ## Output / Responses
 - `POST /auth/{provider}/start` — on success returns a 302 Location pointing at the provider authorization URL (or returns a short one-time token for the client to consume).
-- `GET /callback` — after token exchange the Bridge will attempt a server->server POST to the client's callback; if that fails it returns a minimal auto-submitting HTML form that POSTs `access_token`, `refresh_token`, and optionally `_wpnonce` to the client.
+- `GET /callback` — after token exchange the Bridge delivers a minimal auto-submitting HTML form that POSTs `access_token`, `refresh_token`, and optionally `_wpnonce` to the client. By default the Bridge does not perform a server->server POST to the client's callback to maximize compatibility with hosts behind firewalls. Server->server callback POSTs can be enabled explicitly in bridge configuration but are disabled by default for security and compatibility.
 - `POST /auth/{provider}/refresh` — returns provider JSON (typically `access_token`, `expires_in`, `scope`, `token_type`).
 
 ## Recommended flow (server-to-server)
@@ -236,17 +236,17 @@ The notes below summarize recent development additions and recommended client ch
 
 - One-time token handoff: to prevent "invalid state" when sites start the flow server-to-server, the Bridge supports a short-lived one-time token stored in `oauth_start_tokens`.
 
-- Fields added to the start token record:
+  - Fields added to the start token record:
   - `client_wpnonce` — optional nonce provided by the client and returned during callback.
-  - `client_server_secret` — used to authenticate Bridge->client server POSTs.
+  - Note: the bridge no longer stores a per-token `client_server_secret`. Server-side API keys (`api_key_server`) are validated at start, but secrets are not persisted with the start token.
 
 - Recommended server->server start flow (safe):
   1. Client backend POSTs to Bridge `/api/start-token` (or `/auth/{provider}/start`) with `site`, `api_key_server`, optional `client_wpnonce` and `scope`.
-  2. Bridge validates the call, stores `client_wpnonce` and `client_server_secret`, and returns a short `token` to the backend.
+  2. Bridge validates the call and stores `client_wpnonce`, then returns a short `token` to the backend.
   3. Backend redirects the browser to Bridge consumer URL `/start/token?token=SHORT_TOKEN` so the Bridge can create a browser session and `state`.
 
 - Bridge callback behavior (server->server POST then fallback):
-  - After the code→token exchange the Bridge will try a server->server POST to the client's callback endpoint using `client_server_secret` for authentication.
+  - After the code→token exchange the Bridge delivers tokens to the client via browser POST (auto-submit). Server->server POSTs are not performed by default.
   - If the POST fails, the Bridge serves a minimal HTML form that auto-submits to the client callback (browser fallback).
 
 - Scope handling and future work:
@@ -257,7 +257,7 @@ The notes below summarize recent development additions and recommended client ch
 ```sql
 ALTER TABLE oauth_start_tokens
   ADD COLUMN client_wpnonce VARCHAR(255) NULL,
-  ADD COLUMN client_server_secret VARCHAR(255) NULL;
+  -- `client_server_secret` column is not required in the current schema.
 ```
 
 - Logging cleanup: temporary local debug endpoints and raw file dumps (e.g. `callback-raw.log`) were removed; the Bridge logs minimal, non-sensitive metadata.
