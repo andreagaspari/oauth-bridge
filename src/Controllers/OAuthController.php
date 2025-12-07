@@ -165,9 +165,6 @@ class OAuthController
         } catch (\Throwable $e) {
         }
 
-        // Handoff to client site: use POST auto-submit to avoid tokens in query string
-        $access = htmlspecialchars($tokenData['access_token'] ?? '', ENT_QUOTES, 'UTF-8');
-        $refresh = htmlspecialchars($tokenData['refresh_token'] ?? '', ENT_QUOTES, 'UTF-8');
         // Prefer nonce stored in session, but fall back to any client_wpnonce saved with the start token (by state)
         $wpnonce = Session::get('wpnonce') ?? '';
         if (empty($wpnonce)) {
@@ -182,7 +179,6 @@ class OAuthController
                         if (!empty($row['client_wpnonce'])) {
                             $wpnonce = $row['client_wpnonce'];
                         }
-                        $clientServerSecret = !empty($row['client_server_secret']) ? $row['client_server_secret'] : null;
                         // override $site with the value stored at token creation if available
                         if (!empty($row['site'])) {
                             $site = rtrim($row['site'], '/');
