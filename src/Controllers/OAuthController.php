@@ -210,9 +210,6 @@ class OAuthController
         $html .= '<script>document.getElementById("oauthForm").submit();</script>';
         $html .= '</body></html>';
 
-        // Server->server POST disabled for this hosting deployment: always return
-        // the auto-submitting HTML fallback so the browser will deliver tokens.
-
         $response->send($html);
     }
 
