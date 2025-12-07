@@ -119,7 +119,7 @@ class Router
                         if (method_exists($mwInstance, 'handle')) {
                             $ok = $mwInstance->handle($request);
                             if ($ok === false) {
-                                $response->status(403)->send('Forbidden');
+                                $this->renderError($response, $request, 403, 'Forbidden');
                                 return;
                             }
                         }
@@ -133,7 +133,7 @@ class Router
                         if (method_exists($mwInstance, 'handle')) {
                             $ok = $mwInstance->handle($request);
                             if ($ok === false) {
-                                $response->status(403)->send('Forbidden');
+                                $this->renderError($response, $request, 403, 'Forbidden');
                                 return;
                             }
                         }
@@ -155,7 +155,37 @@ class Router
             return;
         }
 
-        $response->status(404)->send('Not Found');
+        $this->renderError($response, $request, 404, 'Not Found');
+    }
+
+    /**
+     * Render an error response. If the client accepts HTML and a matching
+     * error template exists in `views/errors/`, include it; otherwise send
+     * a plain text response (suitable for API clients).
+     *
+     * @param Response $response
+     * @param Request $request
+     * @param int $code
+     * @param string $text
+     * @return void
+     * @since 0.0.1
+     */
+    protected function renderError(Response $response, Request $request, int $code, string $text): void
+    {
+        // set status code for PHP/response
+        http_response_code($code);
+
+        // Resolve path to views/errors/<code>.php
+        $viewsFile = dirname(__DIR__, 2) . '/views/errors/' . $code . '.php';
+
+        if ($request->acceptsHtml() && file_exists($viewsFile)) {
+            // include the error template (server-side include)
+            include $viewsFile;
+            return;
+        }
+
+        // Default fallback for non-HTML clients
+        $response->status($code)->send($text);
     }
 
     /**

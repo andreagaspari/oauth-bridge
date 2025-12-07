@@ -15,6 +15,7 @@ I dati degli utenti finali (credenziali, token, ecc.) non sono memorizzati sul b
 
 ## TODO:
 - Inserire pagine di dettaglio dell'utilizzo del servizio da parte dei siti registrati (numero di chiamate, errori, ecc.)
+- Recupero password utenti admin / user
 - Migliorare gestione dei permessi e ruoli admin / user
 - Aggiungere supporto per altri provider OAuth (Facebook, Microsoft, ecc.)
 

@@ -100,4 +100,25 @@ class Request
         $data = json_decode($this->rawBody, true);
         return is_array($data) ? $data : null;
     }
+
+    /**
+     * Determines if the client accepts HTML responses (checks the Accept header).
+     * Treats "/" as accepting HTML.
+     *
+     * @return bool
+     * @since 0.0.1
+     */
+    public function acceptsHtml(): bool
+    {
+        $accept = $this->server['HTTP_ACCEPT'] ?? '';
+        if ($accept === '') {
+            // No Accept header: assume HTML in typical browser requests
+            return true;
+        }
+        $accept = strtolower($accept);
+        if (strpos($accept, '*/*') !== false) {
+            return true;
+        }
+        return strpos($accept, 'text/html') !== false;
+    }
 }
