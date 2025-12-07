@@ -44,13 +44,16 @@ if (file_exists(__DIR__ . '/config/config.php')) {
 // Sessione sicura (solo se non già avviata)
 if (session_status() !== PHP_SESSION_ACTIVE) {
 	$cookieParams = session_get_cookie_params();
+	// Choose secure flag: prefer explicit env var, fall back to HTTPS detection (including proxy header)
+	$secure = isset($_ENV['SESSION_SECURE']) ? filter_var($_ENV['SESSION_SECURE'], FILTER_VALIDATE_BOOLEAN) : (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'));
+	// Use SameSite=None to allow modern cross-site OAuth redirects. Requires Secure to be true in browsers.
 	session_set_cookie_params([
 		'lifetime' => $cookieParams['lifetime'],
 		'path' => $cookieParams['path'],
 		'domain' => $cookieParams['domain'],
-		'secure' => isset($_ENV['SESSION_SECURE']) ? filter_var($_ENV['SESSION_SECURE'], FILTER_VALIDATE_BOOLEAN) : (!empty($_SERVER['HTTPS'])),
+		'secure' => $secure,
 		'httponly' => true,
-		'samesite' => 'Lax'
+		'samesite' => 'None'
 	]);
 	session_start();
 }

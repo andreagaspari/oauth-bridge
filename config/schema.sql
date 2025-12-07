@@ -48,3 +48,18 @@ CREATE TABLE IF NOT EXISTS `logs` (
   CONSTRAINT `fk_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_logs_site_key` FOREIGN KEY (`site_key_id`) REFERENCES `site_keys`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table for one-time OAuth start tokens (server->server safe flow)
+CREATE TABLE IF NOT EXISTS `oauth_start_tokens` (
+  `token` VARCHAR(64) NOT NULL PRIMARY KEY,
+  `site` VARCHAR(255) NOT NULL,
+  `provider` VARCHAR(64) NOT NULL,
+  `state` VARCHAR(128) NOT NULL,
+  `client_wpnonce` VARCHAR(255) DEFAULT NULL,
+  `client_server_secret` VARCHAR(255) DEFAULT NULL,
+  `created_at` DATETIME NOT NULL,
+  `expires_at` DATETIME NOT NULL,
+  `used` TINYINT(1) NOT NULL DEFAULT 0,
+  `client_ip` VARCHAR(45) DEFAULT NULL,
+  INDEX (`expires_at`)
+);

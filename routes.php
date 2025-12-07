@@ -17,6 +17,9 @@ use Immaginificio\OAuthProxyBridge\Core\Database;
 $router->post('/auth/{provider}/start', 'OAuthController@start', [ApiKeyMiddleware::class]);
 $router->get('/callback', 'OAuthController@callback');
 $router->post('/auth/{provider}/refresh', 'OAuthController@refresh', [ApiKeyMiddleware::class]);
+// One-time token flow: server->server creates a token, browser consumes it
+$router->post('/api/start-token', 'OAuthController@createStartToken', [ApiKeyMiddleware::class]);
+$router->get('/start/token', 'OAuthController@consumeStartToken');
 
 // Root redirect to admin UI
 $router->get('/', function($req, $res) {

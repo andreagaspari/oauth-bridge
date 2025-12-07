@@ -196,6 +196,14 @@ class Log
                 }
             }
 
+            // If this event is tied to a site key (server->server), prefer the site as the actor
+            // and clear any resolved admin user to avoid logging the current admin name.
+            if ($siteKeyId !== null) {
+                // Force actor to the provided $site (fallback to existing actor if not available)
+                $actor = $site ?? $actor;
+                $userId = null;
+            }
+
             // include ip in payload for legacy schemas and keep as separate column for relational schema
             $ip = $getIp();
             if (!is_string($payload)) {

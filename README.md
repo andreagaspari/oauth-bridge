@@ -48,9 +48,9 @@ The bridge validates calling sites using a registered `site_url` together with a
 
 # Integration Guide (site-to-server)
 
-This section explains how remote sites (e.g., a WordPress plugin or a generic backend) should integrate with the OAuth Proxy Bridge to obtain OAuth tokens from external providers (Google, for now).
+This section explains how remote sites (for example a WordPress plugin or a custom backend) should integrate with the OAuth Proxy Bridge to obtain OAuth tokens from external providers (currently Google).
 
-The guide focuses on the caller-side integration (the remote site).
+The structure follows a practical, implementable flow: requirements, endpoints, parameters, recommended server-to-server flow, fallback options, and examples.
 
 Contents
 - Overview
@@ -63,83 +63,62 @@ Contents
 - Callback on the remote site (e.g., WordPress)
 - Refresh token
 - Common error codes
-- cURL examples
+- cURL and PHP examples
 - Security notes
 
 ---
 
 ## Overview
 
-The bridge centralizes the OAuth flow and exposes endpoints to start authorization, receive the provider callback, and refresh tokens. For security, calls are validated against a registered `site_url` and a server API key (`api_key_server`).
+The Bridge centralizes OAuth interactions with external providers. Remote sites call the Bridge to start authorization, and the Bridge completes the provider code→token exchange and hands tokens back to the originating site. Calls that modify or read sensitive state use a site-specific server secret (`api_key_server`) so the secret never needs to be exposed in client-side code.
 
 ## Requirements
-- The remote site must have its `site_url` registered in the admin UI and the corresponding `api_key_server` provided by the bridge administrator.
-- The remote site must expose an endpoint that accepts the tokens POSTed by the bridge after token exchange. In the WordPress example the bridge POSTs to:
-
-  `/wp-admin/admin-post.php?action=imm_google_business_profile_api_oauth_callback`
-
-  If not using WordPress, create an HTTP POST endpoint that accepts the fields described in the "Callback on the remote site" section.
+- Registered `site_url` in the Bridge admin and a server `api_key_server` generated for that site.
+- A reachable callback endpoint on the remote site that accepts POST requests from the Bridge (WordPress example below).
+- HTTPS for both Bridge and client sites in production.
+- PHP 8+ on the Bridge with PDO + cURL (or equivalent HTTP client).
 
 ## Main endpoints
-
 - Start authorization (redirect to provider)
-  - POST `/auth/{provider}/start`
-  - Middleware: `ApiKeyMiddleware` (validates `site` and `api_key_server`)
-  - Example provider: `google`
+  - POST `/auth/{provider}/start` (or `/api/start-token` in some integrations)
+  - Middleware: `ApiKeyMiddleware` validates `site` and `api_key_server`
 
 - Provider callback
-  - GET `/callback`
-  - Public endpoint: the provider redirects here with `code` and `state`.
-  - The server completes the code→token exchange, then forwards tokens to the remote site via a POST auto-submit HTML form.
+  - GET `/callback` (public endpoint — provider redirects here with `code` + `state`)
+  - Bridge exchanges `code` for tokens and forwards them to the client site (server POST or browser auto-submit)
 
 - Refresh token
-  - POST `/auth/{provider}/refresh`
-  - Middleware: `ApiKeyMiddleware`
-  - Purpose: exchange a `refresh_token` for fresh access tokens
+  - POST `/auth/{provider}/refresh` (server-auth required)
+  - Purpose: exchange a saved `refresh_token` for a new access token
 
 ## Input parameters
-
 Protected endpoints require:
-- `site` (string): the registered base URL of the remote site (e.g., `https://example.it`). It must match the registered value (after `rtrim('/')`).
-- `api_key_server` (string): server-side API key associated with the registered `site_url`.
+- `site` (string) — the base URL of the remote site, trimmed of trailing slash; must match the registered `site_url`.
+- `api_key_server` (string) — the server secret issued to the registered site; always keep it server-side.
 
-Endpoint-specific behavior:
-- POST `/auth/{provider}/start`
-  - requires: `site`, `api_key_server`, provider in path
-  - behavior: validates `site`+`api_key_server`, generates `state`, responds with a 302 redirect to the provider's authorization URL
+Endpoint specifics:
+- `POST /auth/{provider}/start` — requires `site`, `api_key_server`; accepts optional `client_wpnonce` and optional `scope` (client-requested scopes).
+- `GET /callback` — provider sends `code` and `state` here; Bridge uses session or one-time token to validate `state`.
+- `POST /auth/{provider}/refresh` — requires `site`, `api_key_server`, and `refresh_token` in the request body.
 
-- GET `/callback`
-  - provider params: `code`, `state`
-  - behavior: validates `state` stored in session, exchanges `code` for tokens, forwards tokens to remote site via POST
-
-- POST `/auth/{provider}/refresh`
-  - requires: `site`, `api_key_server`, `refresh_token`
-  - behavior: validates `site`+`api_key_server`, calls provider token endpoint and returns provider JSON response
-
-> Note: `ApiKeyMiddleware` accepts `site` and `api_key_server` in POST body or query params; POST server-to-server is recommended.
+Note: the Bridge accepts `site` and `api_key_server` in POST body or query params; prefer POST server-to-server for secrets.
 
 ## Output / Responses
-
-- Start (`/auth/{provider}/start`): returns HTTP 302 redirect to the provider's authorization URL.
-
-- Callback (`/callback`): returns an HTML page that auto-submits a POST form to the remote site's callback endpoint with these fields:
-  - `access_token` — the access token (string)
-  - `refresh_token` — the refresh token, if provided (string)
-  - `_wpnonce` — optional nonce stored in session (used by the WordPress example)
-
-- Refresh (`/auth/{provider}/refresh`): returns provider JSON (e.g., Google) typically containing `access_token`, `expires_in`, `scope`, `token_type`, and possibly `refresh_token`.
+- `POST /auth/{provider}/start` — on success returns a 302 Location pointing at the provider authorization URL (or returns a short one-time token for the client to consume).
+- `GET /callback` — after token exchange the Bridge will attempt a server->server POST to the client's callback; if that fails it returns a minimal auto-submitting HTML form that POSTs `access_token`, `refresh_token`, and optionally `_wpnonce` to the client.
+- `POST /auth/{provider}/refresh` — returns provider JSON (typically `access_token`, `expires_in`, `scope`, `token_type`).
 
 ## Recommended flow (server-to-server)
+Use server-to-server start to keep `api_key_server` secret.
 
-To avoid exposing `api_key_server` in client HTML, the recommended flow is:
+1. User clicks "Connect" on the remote site.
+2. Remote site's backend performs `POST /auth/{provider}/start` with `site` and `api_key_server` (and optional `client_wpnonce` / `scope`).
+3. Bridge validates the caller, creates a `state` and either:
+   - returns a 302 Location to the provider auth URL (the remote backend should forward that Location to the browser), or
+   - returns a short one-time `token` the backend returns to the browser and redirects the browser to Bridge consumer URL `/start/token?token=SHORT_TOKEN` so the Bridge can create the browser session and `state`.
+4. Browser follows the redirect and user completes consent on provider side.
 
-1. User clicks "Connect with Google" on the remote site.
-2. The remote site performs a server-to-server POST to `/auth/google/start` with `site` and `api_key_server`.
-3. The bridge responds with a 302 Location header containing the provider authorization URL. The remote site should pass that Location back to the browser (e.g., via a 302 redirect) instead of following the redirect server-side.
-4. The browser is redirected to the provider authorization page.
-
-Server-side pseudo-code (example):
-
+Server-side pseudo-code (PHP):
 ```php
 $ch = curl_init('https://oauth-bridge.example/auth/google/start');
 curl_setopt($ch, CURLOPT_POST, true);
@@ -156,37 +135,33 @@ if ($location) {
 }
 ```
 
-This keeps the `api_key_server` secret on the remote site's server.
+This preserves `api_key_server` on the remote backend.
 
 ## Alternative flow (browser POST)
-
-If the remote site posts `site` and `api_key_server` directly from the browser, the API key will be exposed in the page markup — this is not recommended for production.
+If the remote site posts `site` and `api_key_server` directly from the browser, the server secret is exposed in page markup and should be avoided in production.
 
 ## Callback on the remote site (WordPress example)
-
-After exchanging the code for tokens, the bridge auto-submits a form POST to the remote site's callback endpoint. For WordPress the endpoint used in the example is:
+The Bridge will deliver tokens to the client via POST. Example endpoint in WordPress:
 
 ```
 /wp-admin/admin-post.php?action=imm_google_business_profile_api_oauth_callback
 ```
 
-POST fields sent:
+POST fields delivered by Bridge (at minimum):
 - `access_token`
-- `refresh_token` (if present)
-- `_wpnonce` (optional)
+- `refresh_token` (if provided by the provider)
+- `_wpnonce` (if the client supplied one at start)
 
-The remote site should validate the nonce (if used), store tokens securely server-side, and avoid exposing tokens to clients or logging them.
+Client responsibilities:
+- Verify `_wpnonce` if present using `wp_verify_nonce()`.
+- Accept server->server POSTs that include a valid server secret (if implemented).
+- Store tokens securely server-side (options, encrypted storage, or DB) and do not expose tokens in logs or UI.
 
 ## Refresh token
-
-Endpoint: `POST /auth/{provider}/refresh`
-
-Body (form or JSON): `site`, `api_key_server`, `refresh_token`
-
-Response: provider JSON (or an error object)
+Endpoint: `POST /auth/{provider}/refresh` with `site`, `api_key_server`, and `refresh_token`.
+Response: provider JSON with a fresh `access_token` and expiry info.
 
 Example cURL:
-
 ```bash
 curl -X POST https://oauth-bridge.example/auth/google/refresh \
   -d "site=https://example.it" \
@@ -195,18 +170,15 @@ curl -X POST https://oauth-bridge.example/auth/google/refresh \
 ```
 
 ## Common error codes
-
 - `400 Bad Request` — missing required parameters
 - `403 Forbidden` — invalid `site` / `api_key_server`
 - `404 Not Found` — unsupported provider
 - `500 Server Error` — internal error (e.g., token exchange failure)
 
-Error responses in JSON include an `error` key and optionally a `message`.
+Error responses are JSON with an `error` key and an optional `message`.
 
 ## Examples
-
 Server-to-server start (PHP):
-
 ```php
 $ch = curl_init('https://oauth-bridge.example/auth/google/start');
 curl_setopt($ch, CURLOPT_POST, true);
@@ -228,7 +200,6 @@ if ($location) {
 ```
 
 Refresh example (cURL):
-
 ```bash
 curl -X POST https://oauth-bridge.example/auth/google/refresh \
   -d "site=https://example.it" \
@@ -237,7 +208,6 @@ curl -X POST https://oauth-bridge.example/auth/google/refresh \
 ```
 
 Typical provider response (Google):
-
 ```json
 {
   "access_token": "ya29.a...",
@@ -248,22 +218,54 @@ Typical provider response (Google):
 ```
 
 ## Google notes
-
-- Default scopes include `openid email profile` (configurable). For Business/Profile features add scopes like `https://www.googleapis.com/auth/business.manage`.
-- The bridge requests `access_type=offline` and `prompt=consent` to obtain refresh tokens.
+- Default scopes include `openid email profile` (configurable). For Business/Profile use `https://www.googleapis.com/auth/business.manage`.
+- The Bridge requests `access_type=offline` and `prompt=consent` by default to obtain refresh tokens where possible.
 
 ## Security best practices
-
-- Never expose `api_key_server` in client-side markup. Use server-to-server flows.
-- Store refresh tokens securely on the remote site (encrypted storage or server-side DB).
-- Rotate `api_key_server` if compromise is suspected.
-- Monitor logs for invalid provider or invalid API key attempts.
+- Never expose `api_key_server` in client-side markup; prefer server-to-server flows.
+- Store refresh tokens securely on the client (encrypted storage or server-side DB).
+- Rotate `api_key_server` on suspicion of compromise.
+- Consider IP allowlisting or proxying for provider-side IP-restricted APIs.
 
 ---
 
-If you'd like I can:
-- add WordPress examples for receiving the POST callback,
-- document additional providers (Facebook, Microsoft),
-- add sequence diagrams (textual) for flow clarity.
+## Recent Integration Updates (December 2025)
 
-Documentation generated: December 7, 2025
+The notes below summarize recent development additions and recommended client changes. They are additive to the Integration Guide above.
+
+- One-time token handoff: to prevent "invalid state" when sites start the flow server-to-server, the Bridge supports a short-lived one-time token stored in `oauth_start_tokens`.
+
+- Fields added to the start token record:
+  - `client_wpnonce` — optional nonce provided by the client and returned during callback.
+  - `client_server_secret` — used to authenticate Bridge->client server POSTs.
+
+- Recommended server->server start flow (safe):
+  1. Client backend POSTs to Bridge `/api/start-token` (or `/auth/{provider}/start`) with `site`, `api_key_server`, optional `client_wpnonce` and `scope`.
+  2. Bridge validates the call, stores `client_wpnonce` and `client_server_secret`, and returns a short `token` to the backend.
+  3. Backend redirects the browser to Bridge consumer URL `/start/token?token=SHORT_TOKEN` so the Bridge can create a browser session and `state`.
+
+- Bridge callback behavior (server->server POST then fallback):
+  - After the code→token exchange the Bridge will try a server->server POST to the client's callback endpoint using `client_server_secret` for authentication.
+  - If the POST fails, the Bridge serves a minimal HTML form that auto-submits to the client callback (browser fallback).
+
+- Scope handling and future work:
+  - `https://www.googleapis.com/auth/business.manage` was added to Bridge defaults to support GBP calls immediately.
+  - Recommended improvement: accept client-requested `scope` and persist it as `client_scope`, but enforce a server-side whitelist before using it.
+
+- DB migration (manual SQL example):
+```sql
+ALTER TABLE oauth_start_tokens
+  ADD COLUMN client_wpnonce VARCHAR(255) NULL,
+  ADD COLUMN client_server_secret VARCHAR(255) NULL;
+```
+
+- Logging cleanup: temporary local debug endpoints and raw file dumps (e.g. `callback-raw.log`) were removed; the Bridge logs minimal, non-sensitive metadata.
+
+- Recommended verification after upgrade:
+  1. Disconnect any existing Google connection on the client and re-run the flow.
+  2. Trigger a server-to-server start and confirm the Bridge returns a one-time token.
+  3. Verify tokens arrive at the client via server POST or browser fallback and that required scopes are present.
+
+- Client snippet (server-to-server start): the backend should POST to Bridge `api/start-token` with `site` and `api_key_server`, return the `token` to the browser, and redirect to `/start/token?token=...` on the Bridge.
+
+---

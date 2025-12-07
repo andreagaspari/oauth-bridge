@@ -39,7 +39,8 @@ class GoogleService implements ServiceInterface
             'client_id' => $this->clientId,
             'redirect_uri' => $this->redirectUri,
             'response_type' => 'code',
-            'scope' => $options['scope'] ?? 'openid email profile',
+            // Default scopes: include Google Business Profile management scope so GBP features work by default
+            'scope' => $options['scope'] ?? 'openid email profile https://www.googleapis.com/auth/business.manage',
             'access_type' => $options['access_type'] ?? 'offline',
             'prompt' => $options['prompt'] ?? 'consent',
             'state' => $options['state'] ?? bin2hex(random_bytes(16)),
