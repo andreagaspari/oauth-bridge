@@ -1,7 +1,7 @@
 # OAuth Proxy Bridge
 
 ## Disclaimer dell'autore
-Questo progetto è stato interamente **generato da modelli di intelligenza artificiale** (ChatGPT-5, GPT-5 mini e in piccola parte Claude Sonnet 4.5) a partire da specifiche richieste fornite dall'autore stesso. Una volta elaborata la struttura è stato generato il documento [README-dev.md](README-dev.md) contenente le linee guida usate durante lo sviluppo.<br/> 
+Questo progetto è stato interamente **generato da modelli di intelligenza artificiale** (ChatGPT-5, GPT-5 mini e in piccola parte Claude Sonnet 4.5) in circa 24 ore, a partire da specifiche richieste fornite dall'autore stesso. Una volta elaborata la struttura è stato generato il documento [README-dev.md](README-dev.md) contenente le linee guida usate durante lo sviluppo.<br/> 
 Sebbene l'autore abbia supervisionato e revisionato il codice generato, **l'autore non si assume alcuna responsabilità per eventuali errori, vulnerabilità o problemi derivanti dall'uso di questo software**. Si consiglia vivamente di eseguire una revisione approfondita del codice e di testare accuratamente l'applicazione prima di utilizzarla in ambienti di produzione.
 
 
@@ -15,6 +15,7 @@ I dati degli utenti finali (credenziali, token, ecc.) non sono memorizzati sul b
 
 ## TODO:
 - Inserire pagine di dettaglio dell'utilizzo del servizio da parte dei siti registrati (numero di chiamate, errori, ecc.)
+- Migliorare gestione dei permessi e ruoli admin / user
 - Aggiungere supporto per altri provider OAuth (Facebook, Microsoft, ecc.)
 
 ---
