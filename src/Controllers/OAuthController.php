@@ -165,9 +165,6 @@ class OAuthController
         } catch (\Throwable $e) {
         }
 
-        // Handoff to client site: use POST auto-submit to avoid tokens in query string
-        $access = htmlspecialchars($tokenData['access_token'] ?? '', ENT_QUOTES, 'UTF-8');
-        $refresh = htmlspecialchars($tokenData['refresh_token'] ?? '', ENT_QUOTES, 'UTF-8');
         // Prefer nonce stored in session, but fall back to any client_wpnonce saved with the start token (by state)
         $wpnonce = Session::get('wpnonce') ?? '';
         if (empty($wpnonce)) {
@@ -203,8 +200,7 @@ class OAuthController
             '_wpnonce' => $wpnonce,
         ];
 
-        // Build the minimal auto-submitting HTML fallback (do not send yet).
-        // This will be returned only if server->server POST is not possible or fails.
+        // Use a HTML form with auto-submit to perform a POST redirect (due to firewall/CORS restrictions)
         $html = '<!doctype html><html><head><meta charset="utf-8"><title>OAuth callback</title></head><body>'; 
         $html .= '<form id="oauthForm" method="POST" action="' . htmlspecialchars($callbackUrl) . '">';
         foreach ($post as $k => $v) {
@@ -213,50 +209,6 @@ class OAuthController
         $html .= '</form>';
         $html .= '<script>document.getElementById("oauthForm").submit();</script>';
         $html .= '</body></html>';
-
-        // If we have a server secret provided by the client site, try a server->server POST to the WP callback
-        if (!empty($clientServerSecret)) {
-            try {
-                $postUrl = $callbackUrl;
-                $postData = [
-                    'access_token' => $tokenData['access_token'] ?? '',
-                    'refresh_token' => $tokenData['refresh_token'] ?? '',
-                    'api_key_server' => $clientServerSecret,
-                ];
-
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $postUrl);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-                // execute
-                $bodyResp = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-
-                try {
-                    // ensure server->server post is logged as originating from site_key
-                    $siteKeyIdForServerpost = null;
-                    try {
-                        $siteKeyIdForServerpost = SiteKey::findIdBySiteOrApi($site ?? null, null);
-                    } catch (\Throwable $e) {
-                    }
-                    Log::record($site ?? null, $provider ?? null, 'oauth_callback_serverpost', ['http_code' => $httpCode], null, $siteKeyIdForServerpost);
-                } catch (\Throwable $e) {
-                }
-
-                // Consider 2xx/3xx responses success: redirect browser to WP admin confirmation page
-                if ($httpCode >= 200 && $httpCode < 400) {
-                    $successRedirect = rtrim((string)$site, '/') . '/wp-admin/themes.php?page=imm-theme-settings&tab=recensioni&gbp_connected=1';
-                    $response->redirect($successRedirect);
-                    return;
-                }
-                // otherwise fall through and render the manual form so developer can inspect
-            } catch (\Throwable $e) {
-                // ignore and fall back to form auto-submit
-            }
-        }
 
         $response->send($html);
     }
