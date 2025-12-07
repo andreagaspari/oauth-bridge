@@ -119,11 +119,17 @@ class OAuthController
                 $siteLogged = Session::get('site') ?? null;
                 $providerLogged = Session::get('provider') ?? $params['provider'] ?? null;
                 $sid = session_id();
+                // try to resolve site_key_id for more accurate actor attribution
+                $siteKeyIdLogged = null;
+                try {
+                    $siteKeyIdLogged = SiteKey::findIdBySiteOrApi($siteLogged ?? null, null);
+                } catch (\Throwable $e) {}
+
                 Log::record($siteLogged, $providerLogged, 'oauth_callback_invalid_state', [
                     'received_state_last6' => substr((string)$state, -6),
                     'stored_state_last6' => $storedState ? substr((string)$storedState, -6) : null,
                     'session_id_last8' => $sid ? substr($sid, -8) : null,
-                ]);
+                ], null, $siteKeyIdLogged);
             } catch (\Throwable $e) {
                 // ignore logging errors
             }
@@ -149,7 +155,13 @@ class OAuthController
 
         // Successful token exchange: log the event (do not store tokens in logs)
         try {
-            Log::record($site ?? null, $provider ?? null, 'oauth_callback_success', ['has_access_token' => !empty($tokenData['access_token']) ? 1 : 0]);
+            // resolve site_key_id to ensure server-originated events are attributed to the site key
+            $siteKeyIdForCallback = null;
+            try {
+                $siteKeyIdForCallback = SiteKey::findIdBySiteOrApi($site ?? null, null);
+            } catch (\Throwable $e) {
+            }
+            Log::record($site ?? null, $provider ?? null, 'oauth_callback_success', ['has_access_token' => !empty($tokenData['access_token']) ? 1 : 0], null, $siteKeyIdForCallback);
         } catch (\Throwable $e) {
         }
 
@@ -161,7 +173,9 @@ class OAuthController
         if (empty($wpnonce)) {
             try {
                 $db = Database::getConnection();
-                    $stmt = $db->prepare('SELECT client_wpnonce, client_server_secret FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    // also fetch the `site` stored with the start token so we can reliably
+                    // attribute subsequent callback logs to the correct site_key.
+                    $stmt = $db->prepare('SELECT site, client_wpnonce, client_server_secret FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
                     $stmt->execute([':state' => $state]);
                     $row = $stmt->fetch(\PDO::FETCH_ASSOC);
                     if ($row) {
@@ -169,6 +183,12 @@ class OAuthController
                             $wpnonce = $row['client_wpnonce'];
                         }
                         $clientServerSecret = !empty($row['client_server_secret']) ? $row['client_server_secret'] : null;
+                        // override $site with the value stored at token creation if available
+                        if (!empty($row['site'])) {
+                            $site = rtrim($row['site'], '/');
+                            // also ensure session site is in sync
+                            try { Session::set('site', $site); } catch (\Throwable $e) {}
+                        }
                     }
             } catch (\Throwable $e) {
                 // ignore DB lookup errors, leave wpnonce empty
@@ -216,7 +236,13 @@ class OAuthController
                 curl_close($ch);
 
                 try {
-                    Log::record($site ?? null, $provider ?? null, 'oauth_callback_serverpost', ['http_code' => $httpCode]);
+                    // ensure server->server post is logged as originating from site_key
+                    $siteKeyIdForServerpost = null;
+                    try {
+                        $siteKeyIdForServerpost = SiteKey::findIdBySiteOrApi($site ?? null, null);
+                    } catch (\Throwable $e) {
+                    }
+                    Log::record($site ?? null, $provider ?? null, 'oauth_callback_serverpost', ['http_code' => $httpCode], null, $siteKeyIdForServerpost);
                 } catch (\Throwable $e) {
                 }
 

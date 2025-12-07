@@ -50,7 +50,26 @@ class Log
                 return $_SERVER['REMOTE_ADDR'] ?? null;
             };
             $pdo = Database::getConnection();
+            // preserve whether the caller explicitly provided a userId (may be null)
+            $callerProvidedUserId = $userId;
                 // determine actor/source and current admin id via Auth helper
+                // If a $site parameter (URL) is provided and no explicit userId was supplied,
+                // prefer it as the actor and try to resolve a site_key id. This prevents showing
+                // the current admin username for events that originate from remote sites (server->server).
+                // Do NOT override when an explicit $userId (actor) was provided by the caller (admin actions).
+                if (empty($userId) && !empty($site) && (strpos($site, 'http') === 0 || filter_var($site, FILTER_VALIDATE_URL))) {
+                    try {
+                        $found = SiteKey::findIdBySiteOrApi($site, null);
+                        if (!empty($found)) {
+                            $siteKeyId = (int)$found;
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                    $actor = $site;
+                    $userId = null;
+                }
+
                 // Special-case: for auth login events prefer resolution from payload email or provided userId
                 $isAuthLogin = ($provider === 'auth' && stripos((string)$action, 'login') !== false);
 
@@ -108,7 +127,7 @@ class Log
 
                     if (empty($actor)) {
                         $actor = Auth::currentActorLabel();
-                        if ($userId === null) {
+                        if ($callerProvidedUserId === null && $siteKeyId === null) {
                             $userId = Auth::currentAdminId();
                         }
                     }
@@ -150,7 +169,7 @@ class Log
             // If no explicit userId resolved to an actor, fall back to current session/token
             if (empty($actor)) {
                 $actor = Auth::currentActorLabel();
-                if ($userId === null) {
+                if ($callerProvidedUserId === null && $siteKeyId === null) {
                     $userId = Auth::currentAdminId();
                 }
             }
@@ -196,12 +215,43 @@ class Log
                 }
             }
 
-            // If this event is tied to a site key (server->server), prefer the site as the actor
-            // and clear any resolved admin user to avoid logging the current admin name.
+            // If this event is tied to a site key (server->server), prefer the site key's NAME
+            // as the actor (human-friendly). Only apply this override when no explicit
+            // admin/user actor was provided by the caller. This prevents admin UI actions
+            // that pass a $userId from being attributed to the site key.
             if ($siteKeyId !== null) {
-                // Force actor to the provided $site (fallback to existing actor if not available)
-                $actor = $site ?? $actor;
-                $userId = null;
+                try {
+                    $pdo2 = Database::getConnection();
+                    $sstmt = $pdo2->prepare('SELECT name, site_url FROM site_keys WHERE id = :id LIMIT 1');
+                    $sstmt->execute([':id' => $siteKeyId]);
+                    $srow = $sstmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($srow) {
+                        $keyName = !empty($srow['name']) ? $srow['name'] : null;
+                        $keySite = !empty($srow['site_url']) ? $srow['site_url'] : null;
+                        // Only override the resolved actor when there is no explicit userId
+                        // (i.e. caller didn't pass an admin actor). If a userId is present,
+                        // keep the actor derived from the user.
+                        if (empty($userId)) {
+                            if (!empty($keyName)) {
+                                $actor = $keyName;
+                            } elseif (!empty($keySite)) {
+                                $actor = $keySite;
+                            } else {
+                                $actor = $site ?? $actor;
+                            }
+                        }
+                    } else {
+                        $actor = $site ?? $actor;
+                    }
+                } catch (\Throwable $e) {
+                    // on any DB error fall back to site
+                    $actor = $site ?? $actor;
+                }
+                // ensure we do not attribute this event to an admin user only when
+                // the caller did not explicitly provide a userId
+                if ($callerProvidedUserId === null) {
+                    $userId = null;
+                }
             }
 
             // include ip in payload for legacy schemas and keep as separate column for relational schema
