@@ -9,7 +9,7 @@ use Immaginificio\OAuthProxyBridge\Services\ServiceManager;
 use Immaginificio\OAuthProxyBridge\Core\Session;
 
 /**
- * Controller per gli endpoint OAuth
+ * Controller for OAuth endpoints
  *
  * @package Immaginificio\OAuthProxyBridge\Controllers
  * @since 0.0.1
@@ -19,7 +19,7 @@ class OAuthController
     protected ServiceManager $services;
 
     /**
-     * Costruisce il controller OAuth e inizializza il ServiceManager.
+     * Construct the OAuth controller and initialize the ServiceManager.
      *
      * @since 0.0.1
      */
@@ -29,7 +29,7 @@ class OAuthController
     }
 
     /**
-     * Avvia il flusso di autorizzazione per il provider.
+     * Start the authorization flow for a provider.
      *
      * @param Request $request
      * @param Response $response
@@ -81,7 +81,7 @@ class OAuthController
     }
 
     /**
-     * Callback endpoint per il provider.
+        * Provider callback endpoint.
      *
      * @param Request $request
      * @param Response $response
@@ -134,7 +134,7 @@ class OAuthController
     }
 
     /**
-     * Refresh endpoint: scambia refresh token per nuovi access token.
+        * Refresh endpoint: exchange a refresh token for new access tokens.
      *
      * @param Request $request
      * @param Response $response

@@ -19,7 +19,7 @@ use Immaginificio\OAuthProxyBridge\Core\Auth;
 class AuthController
 {
     /**
-     * Login dell'utente admin: verifica credenziali e imposta sessione.
+        * Admin user login: verify credentials and set the admin session.
      *
      * @param Request $request
      * @param Response $response
@@ -117,7 +117,7 @@ class AuthController
     }
 
     /**
-     * Effettua logout rimuovendo i valori di sessione dell'admin.
+        * Log out the current admin user and clear session values.
      *
      * @param Request $request
      * @param Response $response
@@ -131,7 +131,7 @@ class AuthController
     }
 
     /**
-     * Richiede l'invio del token per il reset password via email.
+     * Request a password reset token sent via email.
      *
      * @param Request $request
      * @param Response $response
@@ -169,7 +169,7 @@ class AuthController
     }
 
     /**
-     * Conferma e applica il reset della password usando token temporaneo.
+     * Confirm and apply a password reset using a temporary token.
      *
      * @param Request $request
      * @param Response $response

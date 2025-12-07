@@ -6,7 +6,7 @@ use Immaginificio\OAuthProxyBridge\Core\Database;
 use Immaginificio\OAuthProxyBridge\Models\Log;
 
 /**
- * SiteKey model: validazione chiavi API per i siti client
+ * SiteKey model: API key validation for client sites
  *
  * @package Immaginificio\OAuthProxyBridge\Models
  * @since 0.0.1
@@ -14,7 +14,7 @@ use Immaginificio\OAuthProxyBridge\Models\Log;
 class SiteKey
 {
     /**
-     * Valida un sito e la sua API key controllando DB, env e configurazioni legacy.
+     * Validate a site and its API key checking DB, env and legacy configurations.
      * Sources (in order): `SITE_KEYS` env var (JSON map), `config/config.php` constant SITE_KEYS, legacy `_legacy` mapping.
      *
      * @param string $site
@@ -95,8 +95,8 @@ class SiteKey
     }
 
     /**
-     * Trova l'id di una `site_key` dato un `site_url` e/o `api_key`.
-     * Restituisce `int` o `null` se non trovato.
+     * Find the id of a `site_key` given a `site_url` and/or `api_key`.
+     * Returns `int` or `null` if not found.
      *
      * @param string|null $site
      * @param string|null $apiKey

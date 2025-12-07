@@ -14,12 +14,12 @@ class Response
     protected array $headers = [];
     protected string $body = '';
     /**
-     * Imposta lo status code della risposta.
-     *
-     * @param int $code
-     * @return $this
-     * @since 0.0.1
-     */
+        * Set the HTTP status code for the response.
+        *
+        * @param int $code
+        * @return $this
+        * @since 0.0.1
+        */
     public function status(int $code): self
     {
         $this->status = $code;
@@ -27,13 +27,13 @@ class Response
     }
 
     /**
-     * Aggiunge/aggiorna un header da inviare.
-     *
-     * @param string $name
-     * @param string $value
-     * @return $this
-     * @since 0.0.1
-     */
+        * Add or update a header to be sent.
+        *
+        * @param string $name
+        * @param string $value
+        * @return $this
+        * @since 0.0.1
+        */
     public function header(string $name, string $value): self
     {
         $this->headers[$name] = $value;
@@ -41,12 +41,12 @@ class Response
     }
 
     /**
-     * Invia una risposta JSON e termina l'esecuzione.
-     *
-     * @param mixed $data
-     * @return void
-     * @since 0.0.1
-     */
+        * Send a JSON response and terminate execution.
+        *
+        * @param mixed $data
+        * @return void
+        * @since 0.0.1
+        */
     public function json($data): void
     {
         $this->header('Content-Type', 'application/json; charset=utf-8');
@@ -58,13 +58,13 @@ class Response
     }
 
     /**
-     * Esegue un redirect HTTP.
-     *
-     * @param string $url
-     * @param int $status
-     * @return void
-     * @since 0.0.1
-     */
+        * Perform an HTTP redirect.
+        *
+        * @param string $url
+        * @param int $status
+        * @return void
+        * @since 0.0.1
+        */
     public function redirect(string $url, int $status = 302): void
     {
         http_response_code($status);
@@ -73,12 +73,12 @@ class Response
     }
 
     /**
-     * Invia contenuto testuale come body della risposta.
-     *
-     * @param string $body
-     * @return void
-     * @since 0.0.1
-     */
+        * Send textual content as the response body.
+        *
+        * @param string $body
+        * @return void
+        * @since 0.0.1
+        */
     public function send(string $body): void
     {
         http_response_code($this->status);

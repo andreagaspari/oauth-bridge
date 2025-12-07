@@ -15,10 +15,10 @@ class GoogleService implements ServiceInterface
     protected string $redirectUri;
 
     /**
-     * Inizializza le credenziali del client Google dal `.env` o dalle costanti.
-     *
-     * @since 0.0.1
-     */
+        * Initialize Google client credentials from `.env` or defined constants.
+        *
+        * @since 0.0.1
+        */
     public function __construct()
     {
         $this->clientId = $_ENV['GOOGLE_CLIENT_ID'] ?? (defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '');
@@ -27,12 +27,12 @@ class GoogleService implements ServiceInterface
     }
 
     /**
-     * Costruisce l'URL di autorizzazione per Google.
-     *
-     * @param array $options
-     * @return string
-     * @since 0.0.1
-     */
+        * Build the authorization URL for Google.
+        *
+        * @param array $options
+        * @return string
+        * @since 0.0.1
+        */
     public function getAuthUrl(array $options = []): string
     {
         $params = array_merge([
@@ -49,12 +49,12 @@ class GoogleService implements ServiceInterface
     }
 
     /**
-     * Scambia il codice per i token tramite chiamata POST a Google.
-     *
-     * @param array $params
-     * @return array
-     * @since 0.0.1
-     */
+        * Exchange the authorization code for tokens via POST to Google.
+        *
+        * @param array $params
+        * @return array
+        * @since 0.0.1
+        */
     public function exchangeCode(array $params): array
     {
         $tokenUrl = 'https://oauth2.googleapis.com/token';
@@ -70,12 +70,12 @@ class GoogleService implements ServiceInterface
     }
 
     /**
-     * Richiede nuovi token a partire da un refresh token.
-     *
-     * @param string $refreshToken
-     * @return array
-     * @since 0.0.1
-     */
+        * Request new tokens using a refresh token.
+        *
+        * @param string $refreshToken
+        * @return array
+        * @since 0.0.1
+        */
     public function refreshToken(string $refreshToken): array
     {
         $tokenUrl = 'https://oauth2.googleapis.com/token';

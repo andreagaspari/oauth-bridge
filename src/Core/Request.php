@@ -16,7 +16,7 @@ class Request
     protected $rawBody;
     /**
      * Request constructor.
-     * Inizializza array GET/POST/SERVER e legge il body raw.
+        * Initialize GET/POST/SERVER arrays and read the raw request body.
      *
      * @since 0.0.1
      */
@@ -29,7 +29,7 @@ class Request
     }
 
     /**
-     * Restituisce il metodo HTTP della richiesta (MAIUSCOLO).
+        * Return the HTTP method of the request (UPPERCASE).
      *
      * @return string
      * @since 0.0.1
@@ -40,7 +40,7 @@ class Request
     }
 
     /**
-     * Restituisce il path della richiesta (senza query string).
+        * Return the request path (without query string).
      *
      * @return string
      * @since 0.0.1
@@ -53,7 +53,7 @@ class Request
     }
 
     /**
-     * Recupera un valore dalla querystring ($_GET).
+        * Retrieve a value from the query string ($_GET).
      *
      * @param string $key
      * @param mixed|null $default
@@ -66,7 +66,7 @@ class Request
     }
 
     /**
-     * Recupera un valore da $_POST.
+        * Retrieve a value from $_POST.
      *
      * @param string $key
      * @param mixed|null $default
@@ -79,7 +79,7 @@ class Request
     }
 
     /**
-     * Unisce GET e POST in un array associativo.
+        * Merge GET and POST into a single associative array.
      *
      * @return array
      * @since 0.0.1
@@ -90,7 +90,7 @@ class Request
     }
 
     /**
-     * Interpreta il body raw come JSON e lo ritorna come array.
+        * Interpret the raw request body as JSON and return it as an array.
      *
      * @return array|null
      * @since 0.0.1

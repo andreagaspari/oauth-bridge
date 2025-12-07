@@ -3,7 +3,7 @@
 namespace Immaginificio\OAuthProxyBridge\Services;
 
 /**
- * ServiceManager: factory semplice per recuperare i servizi provider
+ * ServiceManager: simple factory to retrieve provider services
  *
  * @package Immaginificio\OAuthProxyBridge\Services
  * @since 0.0.1
@@ -12,20 +12,20 @@ class ServiceManager
 {
     protected array $map = [];
     /**
-     * Costruisce il ServiceManager con le mappature di default.
+     * Construct the ServiceManager with default mappings.
      *
      * @since 0.0.1
      */
     public function __construct()
     {
-        // mappatura di default: provider => class FQCN
+        // default mapping: provider => class FQCN
         $this->map = [
             'google' => GoogleService::class,
         ];
     }
 
     /**
-     * Recupera l'istanza del servizio per il provider richiesto.
+     * Retrieve the service instance for the requested provider.
      *
      * @param string $provider
      * @return ServiceInterface|null
@@ -45,7 +45,7 @@ class ServiceManager
     }
 
     /**
-     * Restituisce la lista dei provider disponibili (chiavi mappate).
+     * Return the list of available providers (mapped keys).
      *
      * @return array
      * @since 0.0.1

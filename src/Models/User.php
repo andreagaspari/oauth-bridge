@@ -13,7 +13,7 @@ use Immaginificio\OAuthProxyBridge\Core\Database;
 class User
 {
     /**
-     * Recupera un utente per email.
+     * Retrieve a user by email.
      *
      * @param string $email
      * @return array|null
@@ -33,7 +33,7 @@ class User
     }
 
     /**
-     * Recupera un utente per ID.
+     * Retrieve a user by ID.
      *
      * @param int $id
      * @return array|null
@@ -53,7 +53,7 @@ class User
     }
 
     /**
-     * Verifica la password di un utente dato l'email.
+      * Verify a user's password given their email.
      *
      * @param string $email
      * @param string $password
@@ -70,7 +70,7 @@ class User
     }
 
     /**
-     * Crea un nuovo utente admin.
+     * Create a new admin user.
      *
      * @param string $email
      * @param string $password
@@ -93,7 +93,7 @@ class User
     }
 
     /**
-     * Imposta il token di reset per l'utente.
+     * Set a password reset token for the user.
      *
      * @param string $email
      * @param string $token
@@ -114,7 +114,7 @@ class User
     }
 
     /**
-     * Verifica che il token di reset sia valido e non scaduto.
+     * Verify that a reset token is valid and not expired.
      *
      * @param string $email
      * @param string $token
@@ -141,7 +141,7 @@ class User
     }
 
     /**
-     * Aggiorna la password dell'utente e rimuove il token di reset.
+     * Update the user's password and clear the reset token.
      *
      * @param string $email
      * @param string $newPassword
@@ -162,8 +162,8 @@ class User
     }
 
     /**
-     * Aggiorna il profilo di un utente (nome e/o password).
-     * Usato per permettere all'utente corrente di aggiornare il proprio profilo.
+     * Update a user's profile (name and/or password).
+     * Used to allow the current user to update their profile.
      *
      * @param int $id
      * @param array $data ['name' => string|null, 'password' => string|null]
@@ -212,7 +212,7 @@ class User
     }
 
     /**
-     * Elimina un utente per ID.
+     * Delete a user by ID.
      *
      * @param int $id
      * @return bool

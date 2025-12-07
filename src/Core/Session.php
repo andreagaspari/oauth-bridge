@@ -11,61 +11,61 @@ namespace Immaginificio\OAuthProxyBridge\Core;
 class Session
 {
     /**
-     * Recupera un valore dalla sessione.
-     *
-     * @param string $key
-     * @param mixed|null $default
-     * @return mixed
-     * @since 0.0.1
-     */
+        * Retrieve a value from the session.
+        *
+        * @param string $key
+        * @param mixed|null $default
+        * @return mixed
+        * @since 0.0.1
+        */
     public static function get(string $key, $default = null)
     {
         return $_SESSION[$key] ?? $default;
     }
 
     /**
-     * Imposta un valore in sessione.
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
-     * @since 0.0.1
-     */
+        * Set a value in the session.
+        *
+        * @param string $key
+        * @param mixed $value
+        * @return void
+        * @since 0.0.1
+        */
     public static function set(string $key, $value): void
     {
         $_SESSION[$key] = $value;
     }
 
     /**
-     * Verifica se una chiave è presente in sessione.
-     *
-     * @param string $key
-     * @return bool
-     * @since 0.0.1
-     */
+        * Check if a key exists in the session.
+        *
+        * @param string $key
+        * @return bool
+        * @since 0.0.1
+        */
     public static function has(string $key): bool
     {
         return isset($_SESSION[$key]);
     }
 
     /**
-     * Rimuove una chiave dalla sessione.
-     *
-     * @param string $key
-     * @return void
-     * @since 0.0.1
-     */
+        * Remove a key from the session.
+        *
+        * @param string $key
+        * @return void
+        * @since 0.0.1
+        */
     public static function remove(string $key): void
     {
         unset($_SESSION[$key]);
     }
 
     /**
-     * Genera (o ritorna) un token CSRF memorizzato in sessione.
-     *
-     * @return string
-     * @since 0.0.1
-     */
+        * Generate (or return) a CSRF token stored in the session.
+        *
+        * @return string
+        * @since 0.0.1
+        */
     public static function generateCsrfToken(): string
     {
         if (!isset($_SESSION['_csrf_token'])) {
@@ -75,12 +75,12 @@ class Session
     }
 
     /**
-     * Valida un token CSRF confrontandolo con quello in sessione.
-     *
-     * @param string|null $token
-     * @return bool
-     * @since 0.0.1
-     */
+        * Validate a CSRF token against the session token.
+        *
+        * @param string|null $token
+        * @return bool
+        * @since 0.0.1
+        */
     public static function validateCsrfToken(?string $token): bool
     {
         if (empty($_SESSION['_csrf_token'])) {

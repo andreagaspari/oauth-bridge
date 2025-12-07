@@ -19,7 +19,7 @@ use Immaginificio\OAuthProxyBridge\Services\ServiceManager;
 class AdminController
 {
     /**
-     * Lista le chiavi registrate.
+     * List registered site keys.
      *
      * @param Request $request
      * @param Response $response
@@ -91,7 +91,7 @@ class AdminController
     }
 
     /**
-     * Lista i log recenti.
+     * List recent logs.
      *
      * @param Request $request
      * @param Response $response
@@ -230,7 +230,7 @@ class AdminController
     }
 
     /**
-     * Crea una nuova chiave per un sito.
+     * Create a new site key.
      *
      * @param Request $request
      * @param Response $response
@@ -287,7 +287,7 @@ class AdminController
     }
 
     /**
-     * Aggiorna una chiave esistente.
+     * Update an existing site key.
      *
      * @param Request $request
      * @param Response $response
@@ -420,7 +420,7 @@ class AdminController
     }
 
     /**
-     * Elimina una chiave.
+     * Delete a site key.
      *
      * @param Request $request
      * @param Response $response
@@ -565,7 +565,7 @@ class AdminController
     }
 
     /**
-     * Lista gli utenti admin (per la dashboard)
+     * List admin users (for the dashboard)
      * GET /admin/users
      *
      * @param Request $request
@@ -599,7 +599,7 @@ class AdminController
     }
 
     /**
-     * Crea un nuovo utente admin
+     * Create a new admin user
      * POST /admin/users
      *
      * @param Request $request
@@ -631,7 +631,7 @@ class AdminController
     }
 
     /**
-     * Aggiorna il profilo di un utente (solo l'utente corrente può modificare se stesso)
+     * Update a user's profile (only the user themself can edit their own profile)
      * POST /admin/users/{id}
      *
      * @param Request $request
@@ -711,7 +711,7 @@ class AdminController
     }
 
     /**
-     * Elimina un utente (solo admin può eliminare altri utenti; non si può eliminare se stessi)
+     * Delete a user (only admins can delete other users; self-deletion is not allowed)
      * POST /admin/users/{id}/delete
      *
      * @param Request $request

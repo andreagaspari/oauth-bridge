@@ -27,43 +27,73 @@ Il Bridge:
 - Non conserva token sensibili (stateless bridge)
 - Valida i siti tramite API key
 - Offre un pannello admin per gestione utenti / chiavi / log
-- Supporta configurazioni multi-tenant: più siti possono accedere con chiavi distinte.
+````markdown
+# OAuthProxyBridge – Developer Documentation
+
+Welcome to `OAuthProxyBridge` (short-name: `oauth-bridge`), a modular and secure bridge that manages OAuth 2.0 flows between external providers (Google, Meta, Apple, LinkedIn, etc.) and client applications such as WordPress.
+
+This project is organized as a compact PHP micro-framework with routing, middleware, controllers, services and models, designed to run on shared hosting using `.htaccess` when needed.
+
+This developer README covers:
+- Architecture overview
+- Full folder layout
+- Roles of main files
+- Development guidelines
+- DocBlock conventions
+- `@since` usage
+- Security notes
 
 ---
 
-# ⚙️ Installazione (server)
+# Project purpose
 
-Questa sezione spiega come installare e mettere in produzione `oauth-bridge` (alias `OAuthProxyBridge`) su un server Linux/Apache (o ambiente simile). Le istruzioni sono intenzionalmente conservative: preferisci sempre un ambiente di staging prima della produzione.
+OAuthProxyBridge acts as a secure bridge between remote sites/webapps and OAuth2 providers. The bridge:
 
-Prerequisiti minimi
-- PHP 8.0+ con estensioni: `pdo`, `pdo_mysql`, `curl`, `mbstring`, `json`, `openssl`.
-- Composer (per autoload e dipendenze opzionali)
-- MySQL/MariaDB (o altro DB supportato da PDO) se vuoi usare il DB per `site_keys`, `users` e `logs`.
-- Apache con `mod_rewrite` (o nginx con configurazione equivalente)
-- HTTPS con certificato valido (Let’s Encrypt consigliato)
+- Starts OAuth flows (`start`)
+- Handles provider callbacks that return `code` and `state`
+- Performs the token exchange (access + refresh tokens)
+- Supports token `refresh`
+- Is stateless regarding end-user tokens (tokens are not persisted by default)
+- Validates calling sites using API keys
+- Provides a lightweight admin panel for users/keys/logs
+- Supports multi-tenant use: multiple sites can access the bridge with separate keys
 
-Passi di installazione
+---
 
-1. Checkout del repository
+# Server installation
+
+These instructions assume a Linux/Apache-like host. They are conservative — test on staging before production.
+
+Minimum requirements
+- PHP 8.0+ with extensions: `pdo`, `pdo_mysql`, `curl`, `mbstring`, `json`, `openssl`
+- Composer (for autoload and dependency management)
+- MySQL/MariaDB (or another PDO-compatible database) for `site_keys`, `users`, `logs` (optional)
+- Apache with `mod_rewrite` (or equivalent nginx configuration)
+- HTTPS with a valid certificate (Let's Encrypt recommended)
+
+Installation steps
+
+1) Clone the repo
 
 ```bash
 git clone https://github.com/andreagaspari/oauth-bridge.git oauth-bridge
 cd oauth-bridge
 ```
 
-2. Dipendenze PHP
+2) Install PHP dependencies
 
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
 
-3. Configurazione ambiente
-- Copia il file di esempio `.env.example` (se presente) in `.env` e modifica i valori:
-	- `DB_DSN`, `DB_USER`, `DB_PASS` — dati per la connessione al DB
-	- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — credenziali Google
-	- `APP_ENV=production` e `APP_DEBUG=0` in produzione
+3) Environment configuration
 
-Esempio minimo `.env`:
+- Copy `example.env` (or `.env.example`) to `.env` and adjust values:
+  - `DB_DSN`, `DB_USER`, `DB_PASS` — DB connection
+  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` — Google credentials
+  - `APP_ENV=production` and `APP_DEBUG=0` for production
+
+Example `.env` minimal:
 
 ```
 DB_DSN=mysql:host=127.0.0.1;dbname=oauth_bridge;charset=utf8mb4
@@ -78,9 +108,9 @@ APP_ENV=production
 APP_DEBUG=0
 ```
 
-4. Creare il database e applicare schema
+4) Create database and apply schema
 
-- Creare il DB e l'utente, quindi importare `config/schema.sql`:
+Create the database and user, then import `config/schema.sql`:
 
 ```sql
 CREATE DATABASE oauth_bridge CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -88,15 +118,15 @@ CREATE USER 'oauth_user'@'localhost' IDENTIFIED BY 'supersecret';
 GRANT ALL PRIVILEGES ON oauth_bridge.* TO 'oauth_user'@'localhost';
 ```
 
-Quindi importare lo schema:
+Import schema:
 
 ```bash
 mysql -u oauth_user -p oauth_bridge < config/schema.sql
 ```
 
-5. Permessi e proprietà
+5) File ownership and permissions
 
-Assicurati che il webserver possa leggere il codice e scrivere le cartelle necessarie (se usi caching / upload). Esempio con Apache su Ubuntu:
+Make sure the webserver can read the files and write needed directories (cache/upload). Example for Apache on Ubuntu:
 
 ```bash
 sudo chown -R www-data:www-data /var/www/oauth-bridge
@@ -104,66 +134,61 @@ sudo find /var/www/oauth-bridge -type d -exec chmod 755 {} \;
 sudo find /var/www/oauth-bridge -type f -exec chmod 644 {} \;
 ```
 
-6. Configurare il VirtualHost (Apache)
-
-Esempio minimo di VirtualHost:
+6) Apache VirtualHost example
 
 ```apache
 <VirtualHost *:80>
-		ServerName your-oauth-bridge.example
-		DocumentRoot /var/www/oauth-bridge
+    ServerName your-oauth-bridge.example
+    DocumentRoot /var/www/oauth-bridge
 
-		<Directory /var/www/oauth-bridge>
-				AllowOverride All
-				Require all granted
-		</Directory>
+    <Directory /var/www/oauth-bridge>
+        AllowOverride All
+        Require all granted
+    </Directory>
 
-		ErrorLog ${APACHE_LOG_DIR}/oauth-bridge_error.log
-		CustomLog ${APACHE_LOG_DIR}/oauth-bridge_access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/oauth-bridge_error.log
+    CustomLog ${APACHE_LOG_DIR}/oauth-bridge_access.log combined
 </VirtualHost>
 ```
 
-Abilita `mod_rewrite` e riavvia Apache:
+Enable `mod_rewrite` and restart Apache:
 
 ```bash
 sudo a2enmod rewrite
 sudo systemctl restart apache2
 ```
 
-7. HTTPS
-
-Attiva HTTPS (Let’s Encrypt / Certbot consigliato):
+7) HTTPS (Let's Encrypt)
 
 ```bash
 sudo apt install certbot python3-certbot-apache
 sudo certbot --apache -d your-oauth-bridge.example
 ```
 
-8. Configurazioni aggiuntive
-- Imposta cron o job di monitoraggio se vuoi pulire log o eseguire task periodici.
-- Controlla `config/providers.php` per personalizzare i redirect URI dei provider.
+8) Additional config
 
-9. Avvio in locale per sviluppo
+- Configure cronjobs or monitoring tasks for log rotation/cleanup as needed
+- Check `config/providers.php` to customize provider redirect URIs
 
-Per test rapido in ambiente di sviluppo puoi usare il server integrato di PHP:
+9) Run locally for development
 
 ```bash
 php -S 127.0.0.1:8000 dev-router.php
 ```
 
-Verifiche post-installazione
-- Visita `https://your-oauth-bridge.example/ping` (dovrebbe rispondere `OK`).
-- Accedi all'area admin (`/admin`) e crea una `site_key` per il sito client.
-- Testa il flusso Google con un sito client in staging (usa il proxy server-to-server consigliato).
+Post-install checks
+- Visit `https://your-oauth-bridge.example/ping` (should respond `OK`)
+- Visit `/admin` and create a `site_key` for a client site
+- Test the Google flow from a staging client using the recommended server-to-server pattern
 
-Note di produzione
-- Non salvare le chiavi `api_key_server` nel frontend. Conserva in secure storage lato server.
-- Abilita logging sicuro e rotazione log.
-- Limita le origini consentite (CORS) se esponi API pubbliche.
+Production notes
+- Never store `api_key_server` in frontend code. Keep it in server-side secure storage.
+- Enable secure logging and log rotation.
+- Restrict allowed origins (CORS) if you expose public APIs.
 
 ---
 
-# 📁 Architettura del progetto
+# Project layout
 
 ```
 /
@@ -172,10 +197,10 @@ Note di produzione
 │   └─ js/
 │
 ├─ config/
-│   ├─ config.php            → configurazioni generali
-│   ├─ db.php                → connessione database
-│   ├─ providers.php         → definizione provider OAuth
-│   └─ schema.sql            → script di installazione DB
+│   ├─ config.php            → general configuration
+│   ├─ db.php                → database connection helper
+│   ├─ providers.php         → provider definitions
+│   └─ schema.sql            → DB schema
 │
 ├─ src/
 │   ├─ Controllers/
@@ -213,37 +238,34 @@ Note di produzione
 │   └─ errors/
 │
 ├─ index.php                 → front controller
-├─ bootstrap.php             → inizializzazione framework
-├─ routes.php                → definizione rotte
+├─ bootstrap.php             → framework bootstrap
+├─ routes.php                → route definitions
 │
-├─ .env                      → variabili d’ambiente
-├─ .htaccess                 → routing + protezioni
-├─ composer.json             → autoload e dipendenze
+├─ .env                      → environment variables
+├─ .htaccess                 → routing + protections
+├─ composer.json             → autoload and dependencies
 └─ .gitignore
 ```
 
 ---
 
-# 📌 Ruolo dei file principali
+# Roles of main files
 
-## index.php (front controller)
-- Punto di ingresso dell’intera applicazione.
-- Carica `bootstrap.php`.
-- Avvia il router.
-- Gestisce eventuali eccezioni.
-- Non contiene logica applicativa.
+## `index.php` (front controller)
+- Entry point for the application
+- Loads `bootstrap.php`
+- Starts the router and handles top-level exceptions
 
-## bootstrap.php
-Inizializza:
-- Autoload Composer
-- Variabili `.env`
-- Sessioni
-- Router
-- Middleware globali
-- Caricamento di `routes.php`
+## `bootstrap.php`
+Initializes:
+- Composer autoload
+- `.env` variables
+- Sessions
+- Router and global middleware
+- Loads `routes.php`
 
-## routes.php
-Mappa URL → controller + middleware, esempio:
+## `routes.php`
+Maps URLs to controllers and middleware, e.g.:
 
 ```
 POST /auth/{provider}/start    → OAuthController::start
@@ -253,182 +275,139 @@ POST /auth/{provider}/refresh  → OAuthController::refresh
 /admin/*                       → AdminController + AuthMiddleware
 ```
 
-## .htaccess
-- Protezione directory sensibili: `src/`, `config/`, `vendor/`, `.env`
-- Routing single-entry-point verso `index.php`
+## `.htaccess`
+- Protects sensitive folders: `src/`, `config/`, `vendor/`, `.env`
+- Routes requests to `index.php` (single entry point)
 
-## src/Core
-Mini-framework interno:
-- Router custom con parametri (es. `{provider}`)
-- Request, Response
-- Session handler sicuro
-- Auth (per pannello admin)
+## `src/Core`
+Lightweight internal framework:
+- Custom Router with parameter support (e.g. `{provider}`)
+- `Request`, `Response` abstractions
+- Session handling
+- Admin authentication helper
 
-## src/Middleware
-Eseguono controlli prima del controller:
-- Validazione API key
-- Verifica login admin
+## `src/Middleware`
+Run pre-controller checks:
+- API key validation
+- Admin authentication
 - Rate limiting
-- Logging richieste
+- Request logging
 
-## src/Services
-Implementano provider OAuth:
+## `src/Services`
+Provider-specific logic:
 - `ServiceInterface.php`
 - `ServiceManager.php` (factory)
-- `GoogleService.php` (primo provider implementato)
+- `GoogleService.php` (initial provider)
 
-## src/Models
-Entità persistenti:
+## `src/Models`
+Persistent entities:
 - `User` (admin)
-- `SiteKey` (API key e siti autorizzati)
-- `Log` (registro richieste)
+- `SiteKey` (API key and allowed sites)
+- `Log` (request logging)
 
 ---
 
-# 📚 Convenzioni per la documentazione (DocBlock)
+# DocBlock conventions
 
-L’intero progetto segue la regola:
+The project follows this rule:
 
-> **Ogni file, classe, metodo e funzione deve contenere un DocBlock completo**, inclusi i tag:
-> - `@package`
-> - `@author`
-> - `@since`
-> - `@param`
-> - `@return`
+> Every file, class, method and function should include a complete DocBlock with the following tags:
+>- `@package`
+>- `@author`
+>- `@since`
+>- `@param`
+>- `@return`
 
-### Esempio DOC per file
+### File DocBlock example
 
 ```php
 /**
- * Gestisce il routing principale dell'applicazione.
+ * Main routing entry for the application.
  *
  * @package OAuthProxyBridge\Core
  * @since 0.0.1
- * @author ...
  */
 ```
 
-### Esempio DOC per classe
+### Class DocBlock example
 
 ```php
 /**
- * Router HTTP custom con supporto middleware e parametri dinamici.
+ * Custom HTTP Router with middleware and dynamic parameter support.
  *
  * @since 0.0.1
  */
 class Router { ... }
 ```
 
-### Esempio DOC per metodo
+### Method DocBlock example
 
 ```php
 /**
- * Registra una nuova rotta GET.
+ * Register a new GET route.
  *
  * @param string   $path
  * @param callable $handler
  * @param array    $middleware
  * @return self
  *
- * @since 0.0.01
+ * @since 0.0.1
  */
 public function get($path, $handler, array $middleware = []) { ... }
 ```
 
 ---
 
-# 🧩 Gestione Componenti e Asset
+# Components and assets
 
-Per mantenere le view leggere e coerenti abbiamo introdotto un piccolo asset manager PHP in `src/Core/Assets.php` con helper per registrare file CSS/JS dei componenti.
+To keep views lightweight we include a small asset manager in `src/Core/Assets.php` with helpers to register component CSS/JS.
 
-Principali API disponibili:
+Main API:
 
-- `Assets::enqueueStyle(string $handle, string $path)` — enqueue uno stylesheet con handle personalizzato.
-- `Assets::enqueueScript(string $handle, string $path, array $deps = [], bool $inFooter = true)` — enqueue uno script.
-- `Assets::enqueueComponentStyle(string|array $component, ?string $baseDir = null)` — enqueue il CSS di un componente usando la convenzione `/assets/css/components/{name}.css`.
-- `Assets::enqueueComponentScript(string|array $component, ?string $baseDir = null, array $deps = [], bool $inFooter = true)` — enqueue lo script del componente in `/assets/js/components/{name}.js`.
-- `Assets::enqueueComponents(array $components, ?string $cssBase = null, ?string $jsBase = null, array $defaultDeps = [], bool $defaultInFooter = true)` — enqueue in batch una lista di componenti; ogni elemento può essere una stringa (es. `'button'`) o un array di configurazione (es. `['name'=>'modal','css'=>true,'js'=>true,'deps'=>[], 'in_footer'=>true]`).
+- `Assets::enqueueStyle(string $handle, string $path)` — enqueue a stylesheet
+- `Assets::enqueueScript(string $handle, string $path, array $deps = [], bool $inFooter = true)` — enqueue a script
+- `Assets::enqueueComponentStyle(string|array $component, ?string $baseDir = null)` — enqueue a component CSS under `/assets/css/components/{name}.css`
+- `Assets::enqueueComponentScript(string|array $component, ?string $baseDir = null, array $deps = [], bool $inFooter = true)` — enqueue a component JS under `/assets/js/components/{name}.js`
+- `Assets::enqueueComponents(array $components, ?string $cssBase = null, ?string $jsBase = null, array $defaultDeps = [], bool $defaultInFooter = true)` — batch enqueue multiple components
 
-Esempi rapidi da inserire nelle view (prima del `require 'layout.php'`):
+Quick examples (before including `layout.php`):
 
 ```php
 use Immaginificio\OAuthProxyBridge\Core\Assets;
 
-// enqueue + stampare (layout chiamerà printStyles()/printScripts())
 Assets::enqueueComponentStyle('button');
 Assets::enqueueComponentScript('toggle-password');
-
-// batch: enqueues css+js convenzionali per i nomi indicati (i nomi vengono risolti sotto
-// `/assets/css/components/{name}.css` e `/assets/js/components/{name}.js`)
 Assets::enqueueComponents(['button','icon-button','card','field','input-group','grid','icon']);
-
-// NOTE: per script non presenti nella cartella `components/` (es. `assets/js/admin-login.js`)
-// passare il percorso esplicito oppure usare `Assets::enqueueScript()`:
 Assets::enqueueScript('admin-login','/assets/js/admin-login.js', [], true);
 ```
 
-Note:
-- Le view non devono stampare manualmente i tag `<link>` / `<script>` quando usano `Assets` — il layout (`views/admin/layout.php`) chiama `Assets::printStyles()` in head e `Assets::printScripts()` in fondo.
-- `Assets` aggiunge automaticamente un `?v=<mtime>` ai percorsi locali per il cache busting.
-- `enqueueComponents()` assume che i nomi forniti siano componenti sotto la cartella `components/`. Se passi invece un percorso completo (es. `'/assets/js/admin-login.js'`) verrà usato così com'è.
-- Se la classe `Assets` non è disponibile (es. durante fasi di bootstrap), le view mantengono un fallback che include i file staticamente.
+Notes:
+- Views should not print `<link>` / `<script>` tags directly when using `Assets` — the layout (`views/admin/layout.php`) calls `Assets::printStyles()` and `Assets::printScripts()`.
+- `Assets` appends `?v=<mtime>` to local asset URLs for cache busting.
+- `enqueueComponents()` expects component names under `components/`. Passing a full path (e.g. `/assets/js/admin-login.js`) will be used as provided.
+- If `Assets` is not available during bootstrap, views fall back to static includes.
 
 Grid note:
-- È presente il CSS componente `assets/css/components/grid.css` per lo stile delle griglie responsivi. Il trasformatore JS che convertiva tabelle in grid è stato rimosso: le pagine admin ora generano direttamente la struttura `.c-grid` via i loro script (es. `assets/js/admin-logs.js`). Di conseguenza, `Assets::enqueueComponents(['grid'])` includerà il solo CSS del componente a meno che non esista anche un `assets/js/components/grid.js`.
+- There is a `assets/css/components/grid.css` component for responsive grids. The previous JS-based table-to-grid transformer was removed; admin pages now render `.c-grid` structure directly. `Assets::enqueueComponents(['grid'])` will include only the CSS unless a corresponding JS exists.
 
 Inline SVG helper:
-- Per poter stilare le icone SVG via CSS, il progetto fornisce `src/Core/Svg.php` con il metodo `Svg::inline($file, $attrs = [])` che legge un file SVG da `/assets/imgs/` e lo inietta inline nel markup. Esempio:
+- Use `src/Core/Svg.php` with `Svg::inline($file, $attrs = [])` to inline SVG from `/assets/imgs/` and provide attributes like `class` or `aria-hidden`.
 
 ```php
 use Immaginificio\OAuthProxyBridge\Core\Svg;
-
-// Includi inline l'icona nel markup (puoi passare attributi come class, aria-hidden ecc.)
 echo Svg::inline('menu.svg', ['class' => 'menu-icon', 'aria-hidden' => 'true']);
 ```
 
-Questo permette di colorare/ruotare/modificare l'SVG via CSS senza ricorrere a `<img>`.
-
 ---
 
+# `@since` standard
 
-# 🧪 Standard `@since`
-
-Il progetto usa semantic versioning:
+The project uses semantic versioning:
 
 ```
 MAJOR.MINOR.PATCH
 ```
-
-Esempio:
-
-- **0.0.01** → prima versione funzionante
-- **0.1.00** → nuove funzionalità minori
-- **1.0.00** → prima release stabile
-
-Regola:
-
-> Ogni classe/metodo/file deve contenere `@since x.x.xx`.
-
----
-
-# 🔐 Sicurezza
-
-- Nessun token OAuth salvato sul server
-- Protezione cartelle sensibili via `.htaccess`
-- Validazione API key via `SiteKey` + `ApiKeyMiddleware`
-- State OAuth codificato e validato
-- Rate limiting configurabile
-- Sessione sicura per pannello admin
-- Password hash sicuro (password_hash)
-
----
-
-# 🛠 Tecnologie utilizzate
-
-- PHP 8+
-- Composer + PSR-4
-- Hosting condiviso (compatibile con `.htaccess`)
-- OAuth 2.0 Authorization Code Flow
+````
 - Router custom stile framework
 
 ---

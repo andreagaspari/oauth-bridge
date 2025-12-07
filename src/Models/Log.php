@@ -16,15 +16,15 @@ use Immaginificio\OAuthProxyBridge\Core\Auth;
 class Log
 {
     /**
-     * Registra un evento di log nel DB.
-     *
-     * @param string|null $site
-     * @param string|null $provider
-     * @param string|null $action
-     * @param mixed $payload
-     * @return bool
-     * @since 0.0.1
-     */
+        * Record a log event into the database.
+        *
+        * @param string|null $site
+        * @param string|null $provider
+        * @param string|null $action
+        * @param mixed $payload
+        * @return bool
+        * @since 0.0.1
+        */
     public static function record(?string $site, ?string $provider, ?string $action, $payload = null, ?int $userId = null, ?int $siteKeyId = null): bool
     {
         try {

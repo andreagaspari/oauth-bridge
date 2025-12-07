@@ -3,7 +3,7 @@
 namespace Immaginificio\OAuthProxyBridge\Core;
 
 /**
- * Router core semplice
+ * Simple Router core
  *
  * @package Immaginificio\OAuthProxyBridge\Core
  * @since 0.0.1
@@ -59,16 +59,15 @@ class Router
         }
         return $this;
     }
-/**
- * add
- *
- * @param mixed $method
- * @param mixed $path
- * @param mixed $handler
- * @param mixed $middleware
- * @return mixed
- * @since 0.0.1
- */
+    /**
+     * Register a route internally.
+     *
+     * @param string $method HTTP method (GET, POST, ...)
+     * @param string $path Route path, may contain {params}
+     * @param callable|string $handler Handler callable or controller string
+     * @param array $middleware Route-specific middleware list
+     * @since 0.0.1
+     */
 
     protected function add(string $method, string $path, $handler, array $middleware = []): void
     {
@@ -205,13 +204,13 @@ class Router
         $regex = preg_replace('#\{([a-zA-Z0-9_]+)\}#', '(?P<$1>[^/]+)', $path);
         return '#^' . $regex . '$#';
     }
-/**
- * extractParams
- *
- * @param mixed $matches
- * @return mixed
- * @since 0.0.1
- */
+    /**
+     * Extract named parameters from regex matches produced by `preg_match`.
+     *
+     * @param array $matches The matches array returned by preg_match
+     * @return array Associative array of named parameters
+     * @since 0.0.1
+     */
 
     protected function extractParams(array $matches): array
     {
@@ -223,13 +222,17 @@ class Router
         }
         return $params;
     }
-/**
- * resolveHandler
- *
- * @param mixed $handler
- * @return mixed
- * @since 0.0.1
- */
+    /**
+     * Resolve handler definitions into a callable.
+     * Supported formats:
+     * - Closure/callable
+     * - '\\Full\\Class\\Name::method' (static or array form)
+     * - 'Class@method' (short controller notation; assumes Controllers namespace)
+     *
+     * @param mixed $handler
+     * @return callable|null
+     * @since 0.0.1
+     */
 
     protected function resolveHandler($handler)
     {
