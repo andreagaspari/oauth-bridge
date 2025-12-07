@@ -176,8 +176,15 @@ class OAuthController
         }
         $callbackUrl = rtrim((string)$site, '/') . '/wp-admin/admin-post.php?action=imm_google_business_profile_api_oauth_callback';
 
-        // Send an immediate auto-submitting form back to the client callback URL.
-        // This is the normal fallback when the server->server POST to the client cannot be used.
+        // Prepare the POST payload that will be sent to the client callback
+        $post = [
+            'access_token' => $tokenData['access_token'] ?? '',
+            'refresh_token' => $tokenData['refresh_token'] ?? '',
+            '_wpnonce' => $wpnonce,
+        ];
+
+        // Build the minimal auto-submitting HTML fallback (do not send yet).
+        // This will be returned only if server->server POST is not possible or fails.
         $html = '<!doctype html><html><head><meta charset="utf-8"><title>OAuth callback</title></head><body>'; 
         $html .= '<form id="oauthForm" method="POST" action="' . htmlspecialchars($callbackUrl) . '">';
         foreach ($post as $k => $v) {
@@ -186,7 +193,6 @@ class OAuthController
         $html .= '</form>';
         $html .= '<script>document.getElementById("oauthForm").submit();</script>';
         $html .= '</body></html>';
-        $response->send($html);
 
         // If we have a server secret provided by the client site, try a server->server POST to the WP callback
         if (!empty($clientServerSecret)) {
