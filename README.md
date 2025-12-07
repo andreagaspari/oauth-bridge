@@ -43,6 +43,7 @@ The bridge validates calling sites using a registered `site_url` together with a
 - Add per-site usage pages (calls, errors, quotas)
 - Improve roles and permissions for admin/users
 - Add support for additional providers (Facebook, Microsoft, etc.)
+ - Investigate server->server POST 400 in some environments — check client callback reachability, SSL, `client_server_secret` correctness, request headers and proxy/network constraints; consider IP allowlisting or proxying. Keep browser auto-submit fallback as safety.
 
 ---
 
