@@ -1,0 +1,68 @@
+# =========================================
+#  GITIGNORE per progetto OAuthProxyBridge
+#  Autore: Andrea Gaspari - Immaginificio
+# =========================================
+
+# -----------------------------------------
+# Ambiente / Configurazioni sensibili
+# -----------------------------------------
+.env
+.env.*
+*.env
+!example.env
+config/config.local.php
+
+# -----------------------------------------
+# Vendor (Composer)
+# -----------------------------------------
+/vendor/
+
+# -----------------------------------------
+# Log, cache, backup
+# -----------------------------------------
+/logs/
+/cache/
+/tmp/
+*.log
+*.cache
+*.bak
+*.old
+
+# -----------------------------------------
+# Sistema operativo / File temporanei
+# -----------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# -----------------------------------------
+# IDE / Editor
+# -----------------------------------------
+# PHPStorm / IntelliJ
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+.history/
+
+# Sublime
+*.sublime-workspace
+*.sublime-project
+
+# Notepad++
+*.nppbackup
+
+# -----------------------------------------
+# File generati automaticamente
+# -----------------------------------------
+/composer.lock
+*.zip
+*.tar.gz
+
+# -----------------------------------------
+# File privati / legacy
+# -----------------------------------------
+_legacy/

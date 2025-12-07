@@ -1,0 +1,30 @@
+/* Component stylesheet: c-autocomplete-list */
+.c-autocomplete-list{
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--overlay-02);
+  box-shadow: 0 8px 24px var(--shadow-strong);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 2000;
+  margin-top: 6px;
+  border-radius: var(--radius-sm);
+}
+.c-autocomplete-list.visible{ display: block; }
+.c-autocomplete-list .c-autocomplete-item{
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.c-autocomplete-list .c-autocomplete-item:hover{
+  background: var(--overlay-03);
+}
+.c-autocomplete-list .c-autocomplete-item[aria-selected="true"],
+.c-autocomplete-list .c-autocomplete-item--highlighted{
+  background: var(--overlay-05);
+}

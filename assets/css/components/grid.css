@@ -1,0 +1,50 @@
+/* Table-like grid: rows are explicit .c-grid__row elements each acting as a grid */
+.c-grid{display:block;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--overlay-03);} 
+.c-grid__row{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:center}
+
+/* Page-specific column layouts (desktop):
+  - keys: Nome, Sito, Descrizione, Servizi, Attiva (40px), Azioni
+  - logs: Sorgente, Provider (100px), Azione, Payload, IP (80px), Data/ora (160px)
+  - users: ID (40px), Nome, Email, Admin (40px), Creato (160px), Azioni
+  Use modifier classes on the `.c-grid` container: `.c-grid--keys`, `.c-grid--logs`, `.c-grid--users` */
+.c-grid--keys .c-grid__row{grid-template-columns:1fr 1fr 1fr 1fr 40px 360px}
+
+/* Align actions cell content to the right on desktop for keys page */
+.c-grid--logs .c-grid__row{grid-template-columns:1fr 100px 1fr 1fr 80px 160px}
+.c-grid--users .c-grid__row{grid-template-columns:40px 1fr 1fr 40px 160px 1fr}
+.c-grid__header-row{/* emphasize header: no border, subtle background */
+  background: var(--overlay-05);
+}
+.c-grid__header{font-weight:800;color:var(--text);font-size:13px;padding:12px 8px;text-transform:none}
+.c-grid__cell{padding:8px;font-size:14px;border-bottom:1px solid var(--overlay-02)}
+.c-grid__cell--truncate{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Alternate row backgrounds to aid readability */
+.c-grid__row:not(.c-grid__header-row):nth-of-type(even){background:rgba(255,255,255,0.01)}
+
+/* Small responsive tweaks: when narrow, reduce columns to 2 */
+@media (max-width:800px){
+  .c-grid__row{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Mobile: stack each row; show header label before each cell value for clarity */
+@media (max-width:720px){
+  .c-grid__row{display:block;padding:8px;border-bottom:1px solid var(--overlay-02)}
+  .c-grid__header-row{display:none}
+  .c-grid__row:not(.c-grid__header-row):nth-of-type(even){background:rgba(255,255,255,0.02)}
+  .c-grid__cell{display:flex;flex-wrap:wrap;padding:8px 0;gap:calc(0.75 * var(--gap));border-bottom:none;font-size:14px;justify-content:space-between;align-items:center}
+  .c-grid__cell + .c-grid__cell{margin-top:8px}
+  .c-grid__cell::before{content:attr(data-label);display:block;font-weight:700;color:var(--muted)}
+  .c-grid__cell--truncate{max-width:none;overflow:visible;white-space:normal}
+
+  /* For actions cell on mobile: hide the label and right-align the buttons to save space */
+  .c-grid__cell--actions::before{display:none}
+  .c-grid__cell--actions .keys-actions{justify-content:flex-end;gap:8px;width:100%}
+}
+
+/* Filter toggle toolbar: hidden by default; shown on small screens as a fallback */
+.c-filter-group__toolbar{display:none}
+@media (max-width:720px){
+  .c-filter-group__toolbar{display:block;margin-bottom:8px}
+  .c-filter-group__toolbar .c-filter-group__toggle{display:inline-block}
+}

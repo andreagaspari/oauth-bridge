@@ -1,0 +1,10 @@
+/* Icon helper */
+.c-icon{width:18px;height:18px;display:inline-block}
+
+/* Status icons for keys list */
+.status-icon{display:inline-flex;align-items:center}
+.status-icon__svg{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px}
+.status-icon__svg svg{width:18px;height:18px;display:block;fill:currentColor}
+.status-icon--active{color:var(--success)}
+.status-icon--inactive{color:var(--danger)}
+.status-icon--inactive svg{transform:rotate(45deg);}

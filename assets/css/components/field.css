@@ -1,0 +1,15 @@
+/* Form field */
+.c-field{margin-bottom:12px}
+.c-field__label{display:block;margin-bottom:6px;color:var(--muted);font-size:13px}
+.c-field__control{display:block;width:100%;padding:10px;background:transparent;border:1px solid var(--overlay-06);color:inherit;border-radius:var(--radius-sm);font-family:inherit}
+.c-field__hint{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* Focus ring for inputs
+	 - use same accent color as buttons
+	 - prefer :focus-visible when supported
+*/
+.c-field__control:focus, .c-field__control:focus-visible{
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}

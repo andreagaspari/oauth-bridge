@@ -1,0 +1,37 @@
+:root{
+  /* Layout sizes */
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 64px;
+  --header-h: 56px;
+  --footer-h: 36px;
+  --gap: 12px;
+
+  /* Colors */
+  --bg: #0f1720; /* page background */
+  --panel: #111827; /* panels / header / footer */
+  --text: #e6eef8; /* primary text */
+  --muted: #9ca3af; /* muted text / labels */
+  --accent: #3b82f6; /* primary accent */
+  --accent-text: #e0f2fe; /* text on accent bg */
+  --danger: #5c0e0e; /* error / danger */
+  --danger-text: #ffb4b4; /* text on danger bg */
+  --success: #166534; /* success */
+  --success-text: #d1fae5; /* text on success bg */
+  --warning: #854d0e; /* warning */
+  --warning-text: #ffedd5; /* text on warning bg */
+
+  /* Card fallback */
+  --card-bg: #0b1220;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* Overlay / translucent shades used across components */
+  --overlay-02: rgba(255,255,255,0.02);
+  --overlay-03: rgba(255,255,255,0.03);
+  --overlay-05: rgba(255,255,255,0.05);
+  --overlay-06: rgba(255,255,255,0.06);
+  --shadow-strong: rgba(2,6,23,0.6);
+}

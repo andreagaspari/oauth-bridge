@@ -1,0 +1,40 @@
+
+/* Select component — harmonized with autocomplete component look */
+.c-select{
+	appearance:none;
+	-webkit-appearance:none;
+	-moz-appearance:none;
+	padding:8px 34px 8px 12px;
+	border-radius:var(--radius-sm);
+	border:1px solid var(--overlay-02);
+	background:var(--panel);
+	color:var(--text);
+	cursor:pointer;
+	font-weight:600;
+	font-size:13px;
+	line-height:1.2;
+	box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+	width: 100%;
+	box-sizing: border-box;
+}
+.c-select:focus, .c-select:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,0.12)}
+.c-select--inline{display:inline-block;vertical-align:middle;margin-right:12px;height:34px}
+
+.c-select-wrapper{position:relative;display:inline-block; width: 100%;}
+.c-select-wrapper::after{
+		content: "";
+		position: absolute;
+		right: 10px;
+		top: 50%;
+		transform: translateY(-50%);
+		pointer-events: none;
+		width: 14px;
+		height: 14px;
+	/* use muted/text color so the arrow is visible on dark backgrounds */
+	background-color: var(--muted);
+		-webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'/></svg>") center/14px no-repeat;
+		mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='white' d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'/></svg>") center/14px no-repeat;
+}
+
+.c-select[disabled]{opacity:0.6;cursor:not-allowed}
+

@@ -1,0 +1,22 @@
+/* Modal component */
+.c-modal{position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;z-index:1300}
+.c-modal.is-open{display:flex}
+.c-modal__backdrop{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(2,6,23,0.6)}
+.c-modal__panel{position:relative;z-index:1;max-width:min(600px, 90vw);width:100%;background:var(--card-bg);border-radius:var(--radius-lg);border:1px solid var(--overlay-03);box-shadow:0 12px 32px var(--shadow-strong);overflow:hidden}
+.c-modal__header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--overlay-02)}
+.c-modal__title{font-weight:600;color:var(--text);font-size:1.05rem}
+.c-modal__body{max-height:60vh;overflow:auto;padding:16px 18px}
+.c-modal__footer{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px;border-top:1px solid var(--overlay-02);background:transparent}
+.c-modal__close{background:transparent;border:none;cursor:pointer;color:var(--muted);font-size:1rem}
+
+/* Ensure form controls inside modals match the surrounding theme
+	- make inputs transparent so they don't show a white box
+	- make inline icon buttons (copy) appear icon-only and unobtrusive
+*/
+.c-modal .c-field__control{background:transparent;color:inherit;border-color:var(--overlay-06)}
+.c-modal .c-input-addon .c-icon-btn{background:transparent;border:none;padding:6px}
+
+/* Payload display in modal: preformatted and scrollable */
+.c-log-payload__pre{white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;font-size:13px;background:var(--overlay-01);padding:12px;border-radius:6px;border:1px solid var(--overlay-02);overflow:auto;max-height:55vh}
+.c-log-payload-preview{cursor:pointer;color:var(--muted)}
+

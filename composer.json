@@ -1,0 +1,22 @@
+{
+    "name": "immaginificio/oauth-bridge",
+    "description": "OAuth 2.0 Bridge Proxy per gestire flussi OAuth esterni (Google, Meta, Apple) con supporto multi-provider e multi-tenant.",
+    "type": "project",
+    "license": "GPL-3.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Immaginificio\\OAuthProxyBridge\\": "src/"
+        }
+    },
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0"
+    },
+    "scripts": {
+        "fix": "php-cs-fixer fix"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

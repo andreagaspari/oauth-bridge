@@ -1,0 +1,22 @@
+RewriteEngine On
+
+# --------------------------------------------
+# BLOCCO ACCESSO DIRETTO A CARTELLE SENSIBILI
+# --------------------------------------------
+RedirectMatch 403 ^/src/
+RedirectMatch 403 ^/config/
+RedirectMatch 403 ^/vendor/
+RedirectMatch 403 ^/views/
+RedirectMatch 403 ^/routes\.php$
+RedirectMatch 403 ^/bootstrap\.php$
+RedirectMatch 403 ^/composer\.json$
+RedirectMatch 403 ^/composer\.lock$
+RedirectMatch 403 ^/\.env$
+
+# --------------------------------------------
+# SINGLE ENTRY POINT ROUTING
+# --------------------------------------------
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+RewriteRule ^ index.php [QSA,L]

@@ -1,0 +1,13 @@
+.c-filter-group{display:block}
+.c-filter-group__toolbar{display:none;margin-bottom:8px}
+.c-filter-group__toolbar .c-filter-group__toggle{font-size:14px}
+
+@media (max-width:900px){
+  /* on small screens hide the inline toolbar and rely on the modal open button */
+  .c-filter-group__toolbar{display:none}
+}
+
+@media (min-width:901px){
+  /* on large screens show the toolbar so user can collapse/expand filters */
+  .c-filter-group__toolbar{display:block}
+}

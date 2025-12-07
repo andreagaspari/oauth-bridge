@@ -1,0 +1,36 @@
+/* Card */
+.c-card {
+    background: var(--card-bg, #0b1220);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 24px var(--shadow-strong);
+    border: 1px solid var(--overlay-03);
+}
+
+.c-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: var(--gap);
+    gap: var(--gap);
+}
+
+.c-card__title {
+    font-weight: 700;
+    margin: 0
+}
+
+.c-card__subtitle {
+    color: var(--muted);
+    margin: calc(0.5 * var(--gap)) 0 0;
+}
+
+.c-card__footer {
+    margin-top: var(--gap);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap);
+    flex-wrap: wrap;
+}

@@ -1,0 +1,22 @@
+/* Responsive filters modal styles */
+.filters-open-btn{display:none}
+
+/* show the open button and hide inline filters on small screens */
+@media (max-width:900px){
+  .filters-open-btn{display:inline-block}
+  /* Avoid targeting the ID directly; JS will add/remove `.filters-hidden` on the real node
+     so we can safely move the node into the modal without conflicting CSS. */
+  .filters-hidden { display: none !important; }
+}
+
+/* overlay */
+.filters-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:4000;display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto}
+.filters-modal{background:var(--panel,#0b1220);width:100%;max-width:980px;border-radius:8px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.6);border:1px solid var(--overlay-03)}
+.filters-modal__header{border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:8px;margin-bottom:8px}
+.filters-modal__header-inner{display:flex;align-items:center;justify-content:space-between}
+.filters-modal__title{margin:0;font-size:16px;font-weight:700}
+.filters-modal__body{max-height:70vh;overflow:auto;padding-bottom:12px}
+.filters-modal__footer{display:flex;gap:8px;justify-content:flex-end;padding-top:8px;border-top:1px solid rgba(255,255,255,0.02);margin-top:8px}
+
+/* prevent body scroll when modal open */
+.filters-modal-open, .filters-modal-open body { overflow: hidden !important }

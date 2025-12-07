@@ -1,0 +1,28 @@
+/* date-range component styles (cleaned and consistent)
+	 - individual date wrappers should use `.c-date-range__custom`
+	 - those wrappers are hidden by default and shown when
+		 the parent `.c-date-range` has the modifier `.c-date-range--custom`
+*/
+.c-date-range {
+	display: flex;
+	gap: 8px;
+	align-items: end;
+}
+
+/* keep preset select aligned and sized */
+.c-date-range .c-select-wrapper { min-width: 160px; display: inline-block; }
+.c-date-range .c-select { height: 36px; }
+
+/* hide custom date blocks by default */
+.c-date-range__custom { display: none; }
+
+/* show custom date blocks when parent has modifier (personalizzato) */
+.c-date-range.c-date-range--custom .c-date-range__custom { display: block; }
+
+/* basic sizing for date inputs */
+.c-date-range input.c-field__control[type="date"]{ padding:8px 10px; height:36px; box-sizing:border-box; min-width:140px }
+
+/* accessibility: labels are present in the DOM but visually hidden when inputs are hidden
+	 they will be visible with the inputs when the modifier is active */
+.c-date-range .c-field__label { margin-bottom:4px; display:block; font-size:13px; color:var(--muted); }
+

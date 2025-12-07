@@ -1,0 +1,32 @@
+/* Button */
+.c-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--overlay-05);background:transparent;color:inherit;cursor:pointer;font-weight:600}
+.c-btn:focus, .c-btn:focus-visible{
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+}
+
+/* Icon-only buttons focus (slightly lighter ring) */
+.c-icon-btn:focus, .c-icon-btn:focus-visible{
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.c-btn--primary{background:var(--accent);color:var(--accent-text, var(--text));border-color:transparent}
+.c-btn--icon{padding:6px;border-radius:10px;width:36px;height:36px}
+
+/* Danger variant for destructive actions */
+.c-btn--danger{background:var(--danger, #e02424);color:var(--text-on-danger, #fff);border-color:transparent}
+.c-btn--danger:hover{filter:brightness(0.95)}
+
+/* Success and Warning variants */
+.c-btn--success{background:var(--success);color:var(--success-text, #fff);border-color:transparent}
+.c-btn--success:hover{filter:brightness(0.98)}
+.c-btn--warning{background:var(--warning);color:var(--warning-text, #fff);border-color:transparent}
+.c-btn--warning:hover{filter:brightness(0.98)}
+
+/* Ensure primary buttons show a visible focus ring even though their border is transparent */
+.c-btn--primary:focus, .c-btn--primary:focus-visible{
+	outline: none;
+	box-shadow: 0 0 0 4px rgba(59,130,246,0.34);
+}

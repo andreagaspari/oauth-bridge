@@ -1,0 +1,14 @@
+/* Alert component */
+.c-alert{padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--overlay-03);background:var(--card-bg);color:var(--text);box-shadow:0 6px 18px var(--shadow-strong);margin:8px 0}
+
+/* Success variant uses palette --success and optional --text-on-success / --success-bg */
+.c-alert--success{border-color:var(--success, rgba(34,197,94,0.18));background:var(--success-bg, var(--success, rgba(34,197,94,0.06)));color:var(--success-text, var(--text))}
+
+/* Danger variant uses palette --danger and optional --text-on-danger / --danger-bg */
+.c-alert--danger{border-color:var(--danger, rgba(239,68,68,0.18));background:var(--danger-bg, var(--danger, rgba(239,68,68,0.06)));color:var(--danger-text, var(--text))}
+
+/* Primary / accent variant (optional) uses --accent-text when present */
+.c-alert--primary{border-color:var(--accent, var(--accent));background:var(--accent-bg, var(--accent, rgba(59,130,246,0.06)));color:var(--accent-text, var(--text))}
+
+.c-alert .c-alert__title{font-weight:700;margin-bottom:6px}
+.c-alert .c-alert__body{font-size:13px;opacity:0.95}

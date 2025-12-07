@@ -1,0 +1,10 @@
+/* Pager component styles: keep compact and match button/select components */
+.c-pager{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap: wrap;}
+.c-pager__info{color:var(--muted);font-size:13px;font-weight:600}
+.c-pager .c-pager__per{display:inline-block}
+.c-pager__pages{flex:1;display:flex;justify-content:center;align-items:center;gap:var(--gap);}
+.c-pager .c-pager__page{min-width:34px;text-align:center}
+
+@media (max-width:600px){
+    .c-pager__pages{width:100%;order: 1;gap:calc(0.5 * var(--gap));}
+}

@@ -1,0 +1,15 @@
+/* Icon button (square) */
+.c-icon-btn{background:transparent;border: 1px solid var(--overlay-05);padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:inherit;gap:6px;}
+.c-icon-btn svg{width:18px;height:18px;display:block}
+
+/* Eye icon visibility for password toggle
+	- by default the open-eye icon is hidden
+	- when the toggle has .is-open the open-eye is shown and closed-eye hidden
+*/
+.svg-eye{display:inline-block;}
+/* Default: show open-eye when password is hidden (input[type=password]) */
+.c-icon-btn .svg-eye--open{display:inline-block;}
+.c-icon-btn .svg-eye--closed{display:none;}
+/* When .is-open (password visible) show closed-eye */
+.c-icon-btn.is-open .svg-eye--open{display:none;}
+.c-icon-btn.is-open .svg-eye--closed{display:inline-block;}
