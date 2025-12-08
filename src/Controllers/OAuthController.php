@@ -294,6 +294,7 @@ class OAuthController
         try {
             $db = Database::getConnection();
             $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
+            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
             $stmt->execute([
                 ':token' => $token,
                 ':site' => rtrim((string)$site, '/'),
