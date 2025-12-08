@@ -172,14 +172,13 @@ class OAuthController
                 $db = Database::getConnection();
                     // also fetch the `site` stored with the start token so we can reliably
                     // attribute subsequent callback logs to the correct site_key.
-                    $stmt = $db->prepare('SELECT site, client_wpnonce, client_server_secret FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt = $db->prepare('SELECT site, client_wpnonce FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
                     $stmt->execute([':state' => $state]);
                     $row = $stmt->fetch(\PDO::FETCH_ASSOC);
                     if ($row) {
                         if (!empty($row['client_wpnonce'])) {
                             $wpnonce = $row['client_wpnonce'];
                         }
-                        $clientServerSecret = !empty($row['client_server_secret']) ? $row['client_server_secret'] : null;
                         // override $site with the value stored at token creation if available
                         if (!empty($row['site'])) {
                             $site = rtrim($row['site'], '/');
@@ -289,25 +288,20 @@ class OAuthController
         $state = bin2hex(random_bytes(16));
         // Accept optional client-provided WP nonce (so the bridge can restore it in browser session)
         $clientWpnonce = $request->post('client_wpnonce', $request->get('client_wpnonce')) ?: ($request->post('_wpnonce', $request->get('_wpnonce')) ?? null);
-        // Accept optional client-provided server secret so the bridge can later POST server->server
-        $clientServerSecret = $request->post('api_key_server', $request->get('api_key_server')) ?: null;
         $created = (new \DateTime('now'))->format('Y-m-d H:i:s');
         $expires = (new \DateTime('now'))->add(new \DateInterval('PT5M'))->format('Y-m-d H:i:s');
-        $clientIp = $_SERVER['REMOTE_ADDR'] ?? null;
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, client_server_secret, created_at, expires_at, used, client_ip) VALUES (:token, :site, :provider, :state, :client_wpnonce, :client_server_secret, :created_at, :expires_at, 0, :client_ip)');
+            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
             $stmt->execute([
                 ':token' => $token,
                 ':site' => rtrim((string)$site, '/'),
                 ':provider' => $provider,
                 ':state' => $state,
                 ':client_wpnonce' => $clientWpnonce,
-                ':client_server_secret' => $clientServerSecret,
                 ':created_at' => $created,
                 ':expires_at' => $expires,
-                ':client_ip' => $clientIp,
             ]);
 
             // Log token creation (safe fields only)
