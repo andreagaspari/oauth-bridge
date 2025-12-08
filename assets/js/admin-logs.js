@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function(){
     'auth':'auth',
     'user':'user',
     'site_key':'site_key',
-    'callback':'callback',
     'google':'google'
   };
 
