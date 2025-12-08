@@ -29,12 +29,20 @@ class LogMiddleware implements MiddlewareInterface
             if ($method === 'GET') {
                 return true;
             }
-            // Keep logging only for callback endpoints (non-GET).
-            // Skip `/auth` endpoints because controllers log auth events explicitly.
-            if (strpos($path, '/callback') === false) {
+            // Keep logging for callback and auth start/refresh endpoints (non-GET).
+            // We'll explicitly include `/auth/{provider}/start`, `/auth/{provider}/refresh` and any `/callback` paths.
+            if ($method !== 'POST' && $method !== 'PUT' && $method !== 'DELETE' && $method !== 'PATCH') {
                 return true;
             }
-                $payload = $request->all();
+
+            // Only continue for relevant endpoints
+            $isAuthStartOrRefresh = preg_match('#^/auth/([^/]+)/(start|refresh)#', $path);
+            $isCallback = (strpos($path, '/callback') !== false);
+            if (!$isAuthStartOrRefresh && !$isCallback) {
+                return true;
+            }
+
+            $payload = $request->all();
                 // remove potentially sensitive fields
                 if (isset($payload['access_token'])) {
                     unset($payload['access_token']);
@@ -57,20 +65,43 @@ class LogMiddleware implements MiddlewareInterface
                     }
                 }
 
-                // determine provider: prefer explicit payload provider, else infer from route
+                // determine provider and action: prefer explicit payload provider, else infer from route
                 $provider = $payload['provider'] ?? null;
-                if (!$provider) {
-                    if (strpos($path, '/auth') === 0) {
-                        $provider = 'auth';
-                    } elseif (strpos($path, '/callback') !== false) {
-                        $provider = 'callback';
-                    } else {
-                        $provider = 'generic';
+                $action = null;
+
+                if (preg_match('#^/auth/([^/]+)/(start|refresh)#', $path, $m)) {
+                    $provider = $m[1];
+                    $op = $m[2];
+                    if ($op === 'start') {
+                        $action = 'oauth_start';
+                    } elseif ($op === 'refresh') {
+                        $action = 'oauth_refresh_token';
                     }
+
+                    // Replace full api key with last 6 chars only to avoid logging secrets
+                    if (isset($payload['oauth_bridge_api_key']) && is_string($payload['oauth_bridge_api_key'])) {
+                        $key = $payload['oauth_bridge_api_key'];
+                        $payload['api_key_last6'] = substr($key, -6);
+                        unset($payload['oauth_bridge_api_key']);
+                    } elseif (isset($payload['api_key']) && is_string($payload['api_key'])) {
+                        $key = $payload['api_key'];
+                        $payload['api_key_last6'] = substr($key, -6);
+                        unset($payload['api_key']);
+                    }
+                } elseif (strpos($path, '/callback') !== false) {
+                    if (!$provider) {
+                        $provider = 'callback';
+                    }
+                    $action = 'oauth_callback';
+                }
+
+                if (!$action) {
+                    // fallback action name (conservative): use a short action token
+                    $action = 'write';
                 }
 
                 // Record only higher-value write events (non-GET) that are not admin read navigation.
-                LogModel::record($payload['site'] ?? null, $provider, $method . ' ' . $path, $payload, $actorId, $siteKeyId);
+                LogModel::record($payload['site'] ?? null, $provider, $action, $payload, $actorId, $siteKeyId);
         } catch (\Throwable $e) {
             // don't block the request on logging failures
             error_log('LogMiddleware error: ' . $e->getMessage());

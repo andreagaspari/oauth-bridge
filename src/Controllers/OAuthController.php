@@ -77,16 +77,7 @@ class OAuthController
         Session::set('site', rtrim((string)$site, '/'));
         Session::set('provider', $provider);
 
-        // Log the oauth start attempt (don't include full state or API keys)
-        try {
-            $sid = session_id();
-            Log::record(rtrim((string)$site, '/'), $provider, 'oauth_start', [
-                'state_last6' => substr($state, -6),
-                'session_id_last8' => $sid ? substr($sid, -8) : null,
-            ]);
-        } catch (\Throwable $e) {
-            // silently ignore logging errors
-        }
+        // NOTE: request-level logging for oauth_start is handled centrally in LogMiddleware.
 
         $authUrl = $service->getAuthUrl(['state' => $state]);
 
