@@ -9,7 +9,7 @@
  * @package   OAuthProxyBridge
  * @author    Andrea Gaspari
  * @license   GPL-3.0-or-later
- * @version   0.1.0
+ * @version   0.1.00
  * @link      https://github.com/andreagaspari/oauth-bridge
  */
 
