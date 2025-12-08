@@ -81,7 +81,7 @@ The Bridge centralizes OAuth interactions with external providers. Remote sites 
 
 ## Main endpoints
 - Start authorization (redirect to provider)
-  - POST `/auth/{provider}/start` (or `/api/start-token` in some integrations)
+  - POST `/auth/{provider}/start` (or server->server `POST /auth/{provider}/get-start-token` to obtain a short one-time token)
   - Middleware: `ApiKeyMiddleware` validates `site` and `oauth_bridge_api_key`
 
 - Provider callback
@@ -116,7 +116,7 @@ Use server-to-server start to keep `oauth_bridge_api_key` secret.
 2. Remote site's backend performs `POST /auth/{provider}/start` with `site` and `oauth_bridge_api_key` (and optional `client_wpnonce` / `scope`).
 3. Bridge validates the caller, creates a `state` and either:
    - returns a 302 Location to the provider auth URL (the remote backend should forward that Location to the browser), or
-   - returns a short one-time `token` the backend returns to the browser and redirects the browser to Bridge consumer URL `/start/token?token=SHORT_TOKEN` so the Bridge can create the browser session and `state`.
+  - returns a short one-time `token` the backend returns to the browser and redirects the browser to Bridge consumer URL `/auth/{provider}/start-with-token?token=SHORT_TOKEN` so the Bridge can create the browser session and `state`.
 4. Browser follows the redirect and user completes consent on provider side.
 
 Server-side pseudo-code (PHP):
@@ -241,9 +241,10 @@ The notes below summarize recent development additions and recommended client ch
   - Note: the bridge no longer stores a per-token `client_server_secret`. Server-side API keys (`oauth_bridge_api_key`) are validated at start, but secrets are not persisted with the start token.
 
 - Recommended server->server start flow (safe):
-  1. Client backend POSTs to Bridge `/api/start-token` (or `/auth/{provider}/start`) with `site`, `oauth_bridge_api_key`, optional `client_wpnonce` and `scope`.
+  1. Client backend POSTs to Bridge `POST /auth/{provider}/get-start-token` (or optionally `POST /auth/{provider}/start`) with `site`, `oauth_bridge_api_key`, optional `client_wpnonce` and `scope`.
+  Optionally include `redirect_uri` (a relative path on the client site, e.g. `/wp-admin/options-general.php?page=imm-settings`, or an absolute URL on the same host) so the Bridge can redirect the browser back to that specific page after the callback (including error or success redirects). The bridge will validate absolute URLs to ensure they match the registered `site` host.
   2. Bridge validates the call and stores `client_wpnonce`, then returns a short `token` to the backend.
-  3. Backend redirects the browser to Bridge consumer URL `/start/token?token=SHORT_TOKEN` so the Bridge can create a browser session and `state`.
+  3. Backend redirects the browser to Bridge consumer URL `/auth/{provider}/start-with-token?token=SHORT_TOKEN` so the Bridge can create a browser session and `state`.
 
 - Bridge callback behavior (server->server POST then fallback):
   - After the code→token exchange the Bridge delivers tokens to the client via browser POST (auto-submit). Server->server POSTs are not performed by default.
@@ -267,6 +268,6 @@ ALTER TABLE oauth_start_tokens
   2. Trigger a server-to-server start and confirm the Bridge returns a one-time token.
   3. Verify tokens arrive at the client via server POST or browser fallback and that required scopes are present.
 
-- Client snippet (server-to-server start): the backend should POST to Bridge `api/start-token` with `site` and `oauth_bridge_api_key`, return the `token` to the browser, and redirect to `/start/token?token=...` on the Bridge.
+  - Client snippet (server-to-server start): the backend should `POST /auth/{provider}/get-start-token` with `site` and `oauth_bridge_api_key`, return the `token` to the browser, and redirect to `/auth/{provider}/start-with-token?token=...` on the Bridge.
 
 ---

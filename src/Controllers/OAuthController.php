@@ -99,19 +99,139 @@ class OAuthController
         $state = $request->get('state') ?? null;
         $code = $request->get('code') ?? null;
 
+        // Provider-level error (e.g. user cancelled consent)
+        $error = $request->get('error') ?? null;
+        if ($error) {
+            // Try to resolve the originating site so we can redirect back there with a friendly error
+            $site = Session::get('site');
+            $provider = Session::get('provider') ?? $params['provider'] ?? null;
+            $redirectUri = Session::get('redirect_uri') ?? null;
+            if (empty($site) && $state) {
+                try {
+                    $db = \Immaginificio\OAuthProxyBridge\Core\Database::getConnection();
+                    $stmt = $db->prepare('SELECT site, client_wpnonce, redirect_uri FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt->execute([':state' => $state]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($row && !empty($row['site'])) {
+                        $site = rtrim($row['site'], '/');
+                    }
+                    if ($row && !empty($row['redirect_uri'])) {
+                        $redirectUri = $row['redirect_uri'];
+                    }
+                } catch (\Throwable $e) {
+                    // ignore DB lookup errors
+                }
+            }
+
+            // Build redirect to client return page (if present) or client root with an error parameter
+            if (!empty($site)) {
+                if (!empty($redirectUri) && is_string($redirectUri)) {
+                    // If redirect_uri is relative (no scheme) treat as path; if absolute ensure same host as site
+                    $isAbsolute = (strpos($redirectUri, '://') !== false);
+                    if ($isAbsolute) {
+                        // only allow absolute redirect URIs that share the same host as the registered site
+                        $siteHost = parse_url((string)$site, PHP_URL_HOST);
+                        $redirHost = parse_url((string)$redirectUri, PHP_URL_HOST);
+                        if ($siteHost && $redirHost && $siteHost === $redirHost) {
+                            $redirectUrl = $redirectUri;
+                        } else {
+                            // host mismatch: ignore and fallback to site root
+                            $redirectUrl = rtrim((string)$site, '/') . '/';
+                        }
+                    } else {
+                        // safe relative path, join to site
+                        $redirectUrl = rtrim((string)$site, '/') . '/' . ltrim((string)$redirectUri, '/');
+                    }
+                    $separator = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+                    $redirectUrl .= $separator . 'oauth_error=' . rawurlencode((string)$error);
+                } else {
+                    // fallback to site root
+                    $redirectUrl = rtrim((string)$site, '/') . '/?oauth_error=' . rawurlencode((string)$error);
+                }
+                if ($provider) {
+                    $redirectUrl .= '&provider=' . rawurlencode((string)$provider);
+                }
+            } else {
+                // Fallback: redirect to bridge root with error info
+                $redirectUrl = '/?oauth_error=' . rawurlencode((string)$error);
+            }
+
+            try {
+                Log::record($site ?? null, $provider ?? null, 'oauth_callback_error', ['error' => (string)$error]);
+            } catch (\Throwable $e) {
+                // ignore logging errors
+            }
+
+            // clear any stored state and return redirect
+            try { Session::remove('oauth2state'); } catch (\Throwable $e) {}
+            $response->redirect($redirectUrl);
+            return;
+        }
+
         if (!$state || !$code) {
-            $response->status(400)->send('Invalid callback request');
+            $err = 'invalid_callback_request';
+            // attempt to resolve site/provider/redirect_uri and redirect with error
+            $site = Session::get('site');
+            $provider = Session::get('provider') ?? $params['provider'] ?? null;
+            $redirectUri = Session::get('redirect_uri') ?? null;
+            if (empty($site) && $state) {
+                try {
+                    $db = \Immaginificio\OAuthProxyBridge\Core\Database::getConnection();
+                    $stmt = $db->prepare('SELECT site, redirect_uri FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt->execute([':state' => $state]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($row && !empty($row['site'])) {
+                        $site = rtrim($row['site'], '/');
+                    }
+                    if ($row && !empty($row['redirect_uri'])) {
+                        $redirectUri = $row['redirect_uri'];
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
+            // build redirect similarly to other error handlers
+            if (!empty($site)) {
+                if (!empty($redirectUri) && is_string($redirectUri)) {
+                    $isAbsolute = (strpos($redirectUri, '://') !== false);
+                    if ($isAbsolute) {
+                        $siteHost = parse_url((string)$site, PHP_URL_HOST);
+                        $redirHost = parse_url((string)$redirectUri, PHP_URL_HOST);
+                        if ($siteHost && $redirHost && $siteHost === $redirHost) {
+                            $redirectUrl = $redirectUri;
+                        } else {
+                            $redirectUrl = rtrim((string)$site, '/') . '/';
+                        }
+                    } else {
+                        $redirectUrl = rtrim((string)$site, '/') . '/' . ltrim((string)$redirectUri, '/');
+                    }
+                } else {
+                    $redirectUrl = rtrim((string)$site, '/') . '/';
+                }
+                $sep = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+                $redirectUrl .= $sep . 'oauth_error=' . rawurlencode($err);
+                if ($provider) $redirectUrl .= '&provider=' . rawurlencode((string)$provider);
+            } else {
+                $redirectUrl = '/?oauth_error=' . rawurlencode($err);
+            }
+
+            try {
+                Log::record($site ?? null, $provider ?? null, 'oauth_callback_error', ['error' => $err, 'state_last6' => $state ? substr((string)$state, -6) : null]);
+            } catch (\Throwable $e) {}
+
+            try { Session::remove('oauth2state'); } catch (\Throwable $e) {}
+            $response->redirect($redirectUrl);
             return;
         }
 
         $storedState = Session::get('oauth2state');
         if ($storedState === null || $state !== $storedState) {
-            // Log invalid state event for debugging/audit (include session id and stored state's suffix)
+            // invalid state: log and redirect back to client redirect_uri with error
+            $siteLogged = Session::get('site') ?? null;
+            $providerLogged = Session::get('provider') ?? $params['provider'] ?? null;
+            $sid = session_id();
             try {
-                $siteLogged = Session::get('site') ?? null;
-                $providerLogged = Session::get('provider') ?? $params['provider'] ?? null;
-                $sid = session_id();
-                // try to resolve site_key_id for more accurate actor attribution
                 $siteKeyIdLogged = null;
                 try {
                     $siteKeyIdLogged = SiteKey::findIdBySiteOrApi($siteLogged ?? null, null);
@@ -122,12 +242,54 @@ class OAuthController
                     'stored_state_last6' => $storedState ? substr((string)$storedState, -6) : null,
                     'session_id_last8' => $sid ? substr($sid, -8) : null,
                 ], null, $siteKeyIdLogged);
-            } catch (\Throwable $e) {
-                // ignore logging errors
+            } catch (\Throwable $e) {}
+
+            // build redirect target
+            $err = 'invalid_state';
+            $site = $siteLogged;
+            $provider = $providerLogged;
+            $redirectUri = Session::get('redirect_uri') ?? null;
+            if (empty($site) && $state) {
+                try {
+                    $db = Database::getConnection();
+                    $stmt = $db->prepare('SELECT site, redirect_uri FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt->execute([':state' => $state]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($row && !empty($row['site'])) {
+                        $site = rtrim($row['site'], '/');
+                    }
+                    if ($row && !empty($row['redirect_uri'])) {
+                        $redirectUri = $row['redirect_uri'];
+                    }
+                } catch (\Throwable $e) {}
+            }
+
+            if (!empty($site)) {
+                if (!empty($redirectUri) && is_string($redirectUri)) {
+                    $isAbsolute = (strpos($redirectUri, '://') !== false);
+                    if ($isAbsolute) {
+                        $siteHost = parse_url((string)$site, PHP_URL_HOST);
+                        $redirHost = parse_url((string)$redirectUri, PHP_URL_HOST);
+                        if ($siteHost && $redirHost && $siteHost === $redirHost) {
+                            $redirectUrl = $redirectUri;
+                        } else {
+                            $redirectUrl = rtrim((string)$site, '/') . '/';
+                        }
+                    } else {
+                        $redirectUrl = rtrim((string)$site, '/') . '/' . ltrim((string)$redirectUri, '/');
+                    }
+                } else {
+                    $redirectUrl = rtrim((string)$site, '/') . '/';
+                }
+                $sep = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+                $redirectUrl .= $sep . 'oauth_error=' . rawurlencode($err);
+                if ($provider) $redirectUrl .= '&provider=' . rawurlencode((string)$provider);
+            } else {
+                $redirectUrl = '/?oauth_error=' . rawurlencode($err);
             }
 
             Session::remove('oauth2state');
-            $response->status(400)->send('Invalid state, possible CSRF');
+            $response->redirect($redirectUrl);
             return;
         }
 
@@ -137,11 +299,51 @@ class OAuthController
         $tokenData = $service->exchangeCode(['code' => $code]);
 
         if (isset($tokenData['error'])) {
+            $errMsg = $tokenData['error'] ?? 'token_exchange_error';
             try {
-                Log::record($site ?? null, $provider ?? null, 'oauth_callback_token_error', ['error' => $tokenData['error'] ?? 'unknown']);
-            } catch (\Throwable $e) {
+                Log::record($site ?? null, $provider ?? null, 'oauth_callback_token_error', ['error' => $errMsg]);
+            } catch (\Throwable $e) {}
+
+            // Redirect back to client's redirect_uri (if available) with error
+            $redirectUri = Session::get('redirect_uri') ?? null;
+            if (empty($redirectUri) && $state) {
+                try {
+                    $db = Database::getConnection();
+                    $stmt = $db->prepare('SELECT redirect_uri, site FROM oauth_start_tokens WHERE state = :state ORDER BY created_at DESC LIMIT 1');
+                    $stmt->execute([':state' => $state]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if ($row) {
+                        if (!empty($row['redirect_uri'])) $redirectUri = $row['redirect_uri'];
+                        if (!empty($row['site'])) $site = rtrim($row['site'], '/');
+                    }
+                } catch (\Throwable $e) {}
             }
-            $response->status(500)->send('Token exchange error');
+
+            if (!empty($site)) {
+                if (!empty($redirectUri) && is_string($redirectUri)) {
+                    $isAbsolute = (strpos($redirectUri, '://') !== false);
+                    if ($isAbsolute) {
+                        $siteHost = parse_url((string)$site, PHP_URL_HOST);
+                        $redirHost = parse_url((string)$redirectUri, PHP_URL_HOST);
+                        if ($siteHost && $redirHost && $siteHost === $redirHost) {
+                            $redirectUrl = $redirectUri;
+                        } else {
+                            $redirectUrl = rtrim((string)$site, '/') . '/';
+                        }
+                    } else {
+                        $redirectUrl = rtrim((string)$site, '/') . '/' . ltrim((string)$redirectUri, '/');
+                    }
+                } else {
+                    $redirectUrl = rtrim((string)$site, '/') . '/';
+                }
+                $sep = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+                $redirectUrl .= $sep . 'oauth_error=' . rawurlencode((string)$errMsg);
+                if ($provider) $redirectUrl .= '&provider=' . rawurlencode((string)$provider);
+            } else {
+                $redirectUrl = '/?oauth_error=' . rawurlencode((string)$errMsg);
+            }
+
+            $response->redirect($redirectUrl);
             return;
         }
 
@@ -182,7 +384,27 @@ class OAuthController
                 // ignore DB lookup errors, leave wpnonce empty
             }
         }
-        $callbackUrl = rtrim((string)$site, '/') . '/wp-admin/admin-post.php?action=imm_google_business_profile_api_oauth_callback';
+        // Determine where to POST the tokens on the client site.
+        // Prefer client-provided `redirect_uri` (session or previously stored) if it is safe; otherwise use the default admin-post action.
+        $sessionRedirect = Session::get('redirect_uri') ?? null;
+        $callbackUrl = '';
+        if (!empty($sessionRedirect) && is_string($sessionRedirect)) {
+            $isAbsolute = (strpos($sessionRedirect, '://') !== false);
+            if ($isAbsolute) {
+                // allow absolute only if host matches registered site
+                $siteHost = parse_url((string)$site, PHP_URL_HOST);
+                $redirHost = parse_url((string)$sessionRedirect, PHP_URL_HOST);
+                if ($siteHost && $redirHost && $siteHost === $redirHost) {
+                    $callbackUrl = $sessionRedirect;
+                }
+            } else {
+                // relative path -> join with site
+                $callbackUrl = rtrim((string)$site, '/') . '/' . ltrim($sessionRedirect, '/');
+            }
+        }
+        if (empty($callbackUrl)) {
+            $callbackUrl = rtrim((string)$site, '/') . '/wp-admin/admin-post.php?action=imm_oauth_callback';
+        }
 
         // Prepare the POST payload that will be sent to the client callback
         $post = [
@@ -282,19 +504,21 @@ class OAuthController
         $state = bin2hex(random_bytes(16));
         // Accept optional client-provided WP nonce (so the bridge can restore it in browser session)
         $clientWpnonce = $request->post('client_wpnonce', $request->get('client_wpnonce')) ?: ($request->post('_wpnonce', $request->get('_wpnonce')) ?? null);
+        // Optional redirect URI on the client site (relative path or absolute URL on same host)
+        $redirectUri = $request->post('redirect_uri', $request->get('redirect_uri')) ?: null;
         $created = (new \DateTime('now'))->format('Y-m-d H:i:s');
         $expires = (new \DateTime('now'))->add(new \DateInterval('PT5M'))->format('Y-m-d H:i:s');
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
-            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :created_at, :expires_at, 0)');
+            $stmt = $db->prepare('INSERT INTO oauth_start_tokens (token, site, provider, state, client_wpnonce, redirect_uri, created_at, expires_at, used) VALUES (:token, :site, :provider, :state, :client_wpnonce, :redirect_uri, :created_at, :expires_at, 0)');
             $stmt->execute([
                 ':token' => $token,
                 ':site' => rtrim((string)$site, '/'),
                 ':provider' => $provider,
                 ':state' => $state,
                 ':client_wpnonce' => $clientWpnonce,
+                ':redirect_uri' => $redirectUri,
                 ':created_at' => $created,
                 ':expires_at' => $expires,
             ]);
@@ -315,8 +539,8 @@ class OAuthController
     }
 
     /**
-     * Browser-facing: consume a one-time token, create a session with oauth2state and redirect to provider.
-     * GET /start/token?token=...
+    * Browser-facing: consume a one-time token, create a session with oauth2state and redirect to provider.
+    * GET /auth/{provider}/start-with-token?token=...
      *
      * @param Request $request
      * @param Response $response
@@ -333,7 +557,7 @@ class OAuthController
 
         try {
             $db = Database::getConnection();
-            $stmt = $db->prepare('SELECT token, site, provider, state, expires_at, used FROM oauth_start_tokens WHERE token = :token LIMIT 1');
+            $stmt = $db->prepare('SELECT token, site, provider, state, client_wpnonce, redirect_uri, expires_at, used FROM oauth_start_tokens WHERE token = :token LIMIT 1');
             $stmt->execute([':token' => $token]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
@@ -362,6 +586,10 @@ class OAuthController
             Session::set('oauth2state', $row['state']);
             Session::set('site', $row['site']);
             Session::set('provider', $row['provider']);
+            // Restore optional return path so we can redirect back to the originating page after callback
+            if (!empty($row['redirect_uri'])) {
+                try { Session::set('redirect_uri', $row['redirect_uri']); } catch (\Throwable $e) {}
+            }
             // Restore WP nonce into session so the subsequent POST to admin-post.php contains it
             if (!empty($row['client_wpnonce'])) {
                 Session::set('wpnonce', $row['client_wpnonce']);

@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS `oauth_start_tokens` (
   `provider` VARCHAR(64) NOT NULL,
   `state` VARCHAR(128) NOT NULL,
   `client_wpnonce` VARCHAR(255) DEFAULT NULL,
+  `redirect_uri` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME NOT NULL,
   `expires_at` DATETIME NOT NULL,
   `used` TINYINT(1) NOT NULL DEFAULT 0,
