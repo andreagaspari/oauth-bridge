@@ -31,7 +31,6 @@ Table of contents
    - [Redirect URI validation](#redirect-uri-validation-algorithm)
    - [Logging examples & retention](#logging-format-and-redaction-example)
    - [Composer scripts](#composer-scripts-recommended-additions-to-composerjson)
-   - [CI skeleton](#minimal-github-actions-ci-skeleton)
    - [Troubleshooting commands](#useful-curl-commands-for-troubleshooting)
    - [LLM prompt templates](#llm-prompt-templates-safe-change-requests)
  - [Security operational runbook](#security-operational-runbook)
@@ -350,30 +349,6 @@ Add convenience scripts to expose project helpers:
 	"phpdoc:apply": "php tools/add_phpdoc.php",
 	"fix:php": "php-cs-fixer fix --config=.php-cs-fixer.php"
 }
-```
-
-Minimal GitHub Actions CI (skeleton)
------------------------------------
-Create `.github/workflows/ci.yml` with:
-
-```yaml
-name: CI
-on: [push, pull_request]
-jobs:
-	quality:
-		runs-on: ubuntu-latest
-		steps:
-			- uses: actions/checkout@v4
-			- name: Setup PHP
-				uses: shivammathur/setup-php@v2
-				with:
-					php-version: '8.1'
-			- name: Install deps
-				run: composer install --no-interaction
-			- name: PHPStan
-				run: vendor/bin/phpstan analyse -l max src
-			- name: PHP-CS-Fixer
-				run: vendor/bin/php-cs-fixer fix --dry-run --diff
 ```
 
 Useful curl commands for troubleshooting
