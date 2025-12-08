@@ -182,7 +182,7 @@ Post-install checks
 - Test the Google flow from a staging client using the recommended server-to-server pattern
 
 Production notes
-- Never store `api_key_server` in frontend code. Keep it in server-side secure storage.
+- Never store `oauth_bridge_api_key` in frontend code. Keep it in server-side secure storage.
 - Enable secure logging and log rotation.
 - Restrict allowed origins (CORS) if you expose public APIs.
 

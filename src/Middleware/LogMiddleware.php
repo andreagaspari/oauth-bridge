@@ -47,7 +47,8 @@ class LogMiddleware implements MiddlewareInterface
 
                 $siteKeyId = null;
                 $siteParam = $payload['site'] ?? $payload['site_url'] ?? null;
-                $apiKeyParam = $payload['api_key_server'] ?? $payload['api_key'] ?? null;
+                // Use canonical `oauth_bridge_api_key` only
+                $apiKeyParam = $payload['oauth_bridge_api_key'] ?? $payload['api_key'] ?? null;
                 if ($siteParam || $apiKeyParam) {
                     try {
                         $siteKeyId = SiteKey::findIdBySiteOrApi($siteParam, $apiKeyParam);
