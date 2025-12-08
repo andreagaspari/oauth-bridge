@@ -20,9 +20,6 @@ The bridge validates calling sites using a registered `site_url` together with a
 ---
 
 # Integration Guide (site-to-server)
----
-
-# Integration Guide (site-to-server)
 
 This short guide explains how to integrate the OAuth Proxy Bridge from a remote site (for example a WordPress theme or plugin). It covers the recommended server-to-server flow, endpoints, payloads, expected responses, and the minimal client-side callback handling.
 
@@ -38,17 +35,15 @@ Table of contents
 - Examples
 
 ## Quick overview
---------------
+
 The Bridge centralizes OAuth interactions with external providers (currently Google). A remote site authenticates to the Bridge using a site-specific server secret (`oauth_bridge_api_key`). The recommended integration keeps the API key on the remote backend (server-to-server) and avoids exposing secrets in browser code.
 
 ## Requirements
-------------
 - A registered `site_url` entry in the Bridge admin and a server `oauth_bridge_api_key` for that site.
 - A reachable HTTPS callback on the remote site to receive tokens (POST). For WordPress this is typically an `admin-post.php` action.
 - Remote backend capable of making server-side HTTPS POST requests.
 
 ## Core endpoints and payloads
----------------------------
 - POST /auth/{provider}/get-start-token
   - Purpose: Server->server request to create a one-time start token. Returns JSON `{ ok: true, token: "..." }` on success.
   - Required fields: `site`, `oauth_bridge_api_key`.
@@ -65,7 +60,6 @@ The Bridge centralizes OAuth interactions with external providers (currently Goo
   - Required fields: `site`, `oauth_bridge_api_key`, `refresh_token`.
 
 ## Responses & behaviors
----------------------
 - `POST /auth/{provider}/get-start-token`
   - 200 JSON `{ "ok": true, "token": "...", "expires_at": "..." }` on success.
   - 4xx JSON errors with `{ "ok": false, "error": "..." }` on client errors.
@@ -78,7 +72,6 @@ The Bridge centralizes OAuth interactions with external providers (currently Goo
   - On errors (user cancel or token exchange failure) the Bridge will redirect the browser to the client's `redirect_uri` (or site root) with `?oauth_error=...&provider=...` so the client can surface the failure.
 
 ## Recommended server-to-server flow (safe)
---------------------------------------
 1. Remote backend posts to Bridge: `POST /auth/{provider}/get-start-token` with `site` and `oauth_bridge_api_key`. Optionally pass `client_wpnonce` and `redirect_uri`.
 2. Bridge validates the API key and stores a one-time record (`oauth_start_tokens`) containing `token`, `state`, optional `client_wpnonce`, and optional `redirect_uri`.
 3. Bridge returns `{ ok: true, token: 'SHORTTOKEN' }` to the backend.
@@ -87,7 +80,6 @@ The Bridge centralizes OAuth interactions with external providers (currently Goo
 6. Bridge exchanges `code`→tokens and forwards the tokens to the registered client callback (auto-submit POST to `redirect_uri` or to a default action if none was provided).
 
 ## Browser-consume (one-time token) flow
-------------------------------------
 This flow avoids exposing the server secret in the browser while enabling correct `state` handling when the Bridge's callback doesn't share cookies with the client site.
 
 Client-side summary (backend):
@@ -104,7 +96,6 @@ exit;
 ```
 
 ## How to handle nonces and state
---------------------------------
 When the Bridge and the client site are on different origins, browser cookies (including WordPress nonces that rely on cookies or SameSite-restricted cookies) may not be available to the Bridge at callback time. This can cause `invalid_state` or missing-nonce failures when the Bridge tries to restore client session/cookies.
 
 To avoid relying on cross-site cookies, the recommended integration uses a short-lived server-side transient (or a one-time database row) keyed by a random token. The transient holds the client-provided nonce (if any) and the `site`/`redirect_uri` for the flow. Typical TTL is 5 minutes.
@@ -122,7 +113,6 @@ Client validation rules:
 This design keeps server secrets server-side, restores client nonces reliably without depending on cross-site cookies, and prevents common `invalid_state` problems caused by cookie restrictions.
 
 ## Callback handling (WordPress example)
-------------------------------------
 Recommended client callback for WordPress: use an `admin-post.php` action that accepts both GET error redirects and POST token deliveries.
 
 - Example action URL (on the client):
@@ -148,17 +138,14 @@ add_action('admin_post_nopriv_imm_oauth_callback', 'imm_oauth_callback_handler')
 ```
 
 ## Refresh flow
-------------
 Clients can refresh tokens via the Bridge to avoid embedding provider secrets locally. Call `POST /auth/{provider}/refresh` with `site`, `oauth_bridge_api_key`, and `refresh_token`. The Bridge forwards the refresh request to the provider and returns provider JSON on success.
 
 ## Errors & logging
-----------------
 - The Bridge uses standard HTTP codes and JSON error payloads for API requests.
 - On provider callback errors (user cancelled consent) the bridge redirects back to the client with `?oauth_error=...&provider=...`.
 - Sensitive values (full API keys, access/refresh tokens) are not logged; logs include redacted metadata (e.g. last 6 chars of tokens/state) and IPs.
 
 ## Examples
---------
 - Server-to-server get-start-token (cURL):
 
 ```bash
@@ -178,7 +165,6 @@ curl -X POST https://oauth-bridge.example/auth/google/refresh \
 ```
 
 ## Security notes
---------------
 - Always keep `oauth_bridge_api_key` on the server; never embed it in client-side code or public templates.
 - Validate `redirect_uri` when provided: only accept relative paths or absolute URLs whose host matches the registered `site_url`.
 - Use HTTPS in production for both Bridge and client sites.

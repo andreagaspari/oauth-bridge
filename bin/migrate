@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Simple migrate helper: applies SQL files from migrations/ in filename order
+# Usage: DB_USER=... DB_PASS=... DB_NAME=... DB_HOST=... ./bin/migrate
+
+set -euo pipefail
+MIGRATIONS_DIR="$(cd "$(dirname "$0")/.." && pwd)/migrations"
+if [ ! -d "$MIGRATIONS_DIR" ]; then
+  echo "Migrations directory not found: $MIGRATIONS_DIR"
+  exit 1
+fi
+
+: ${DB_HOST:=127.0.0.1}
+: ${DB_USER:?'DB_USER is required'}
+: ${DB_PASS:?'DB_PASS is required'}
+: ${DB_NAME:?'DB_NAME is required'}
+
+echo "Applying migrations from $MIGRATIONS_DIR to $DB_NAME@$DB_HOST"
+
+for f in "$MIGRATIONS_DIR"/*.sql; do
+  [ -e "$f" ] || continue
+  echo "-> Applying $(basename "$f")"
+  if ! command -v mysql >/dev/null 2>&1; then
+    echo "mysql client not found in PATH. Install mysql-client or use another method to run migrations."
+    exit 1
+  fi
+  mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$f"
+done
+
+echo "All migrations applied."
