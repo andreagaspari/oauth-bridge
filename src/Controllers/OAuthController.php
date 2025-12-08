@@ -52,7 +52,8 @@ class OAuthController
     {
         $provider = $params['provider'] ?? null;
         $site = $request->post('site', $request->get('site'));
-        $apiKey = $request->post('api_key_server', $request->get('api_key_server'));
+        // Expect the canonical parameter `oauth_bridge_api_key` only.
+        $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
 
         if (!$provider || !$site || !$apiKey) {
             $response->status(400)->send('Missing parameters');
@@ -235,7 +236,8 @@ class OAuthController
         $provider = $params['provider'] ?? null;
         $refreshToken = $request->post('refresh_token', null);
         $site = $request->post('site', $request->get('site'));
-        $apiKey = $request->post('api_key_server', $request->get('api_key_server'));
+        // Expect the canonical parameter `oauth_bridge_api_key` only.
+        $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
 
         if (!$provider || !$refreshToken || !$site || !$apiKey) {
             $response->status(400)->send('Missing parameters');
@@ -258,8 +260,8 @@ class OAuthController
     }
 
     /**
-     * Server->server: create a one-time start token. Returns JSON with `token` and `expires_at`.
-     * Requires valid `site`, `provider` and server-side `api_key_server` (validated via SiteKey).
+    * Server->server: create a one-time start token. Returns JSON with `token` and `expires_at`.
+     * Requires valid `site`, `provider` and server-side `oauth_bridge_api_key` (validated via SiteKey).
      *
      * @param Request $request
      * @param Response $response
@@ -271,7 +273,8 @@ class OAuthController
     {
         $site = $request->post('site', $request->get('site'));
         $provider = $request->post('provider', $request->get('provider')) ?? 'google';
-        $apiKey = $request->post('api_key_server', $request->get('api_key_server'));
+        // Expect the canonical parameter `oauth_bridge_api_key` only.
+        $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
 
         if (!$site || !$apiKey) {
             $response->status(400)->json(['ok' => false, 'error' => 'Missing parameters']);

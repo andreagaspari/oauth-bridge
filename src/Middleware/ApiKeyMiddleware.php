@@ -6,7 +6,7 @@ use Immaginificio\OAuthProxyBridge\Core\Request;
 use Immaginificio\OAuthProxyBridge\Models\SiteKey;
 
 /**
- * ApiKeyMiddleware: valida site + api_key_server nei parametri della richiesta
+ * ApiKeyMiddleware: valida site + oauth_bridge_api_key
  *
  * @package Immaginificio\OAuthProxyBridge\Middleware
  * @since 0.0.1
@@ -22,7 +22,8 @@ class ApiKeyMiddleware
     public function handle(Request $request): bool
     {
         $site = $request->post('site', $request->get('site'));
-        $apiKey = $request->post('api_key_server', $request->get('api_key_server'));
+        // Expect the canonical parameter `oauth_bridge_api_key` only.
+        $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
         $provider = $request->post('provider', $request->get('provider'));
 
         if (empty($site) || empty($apiKey)) {

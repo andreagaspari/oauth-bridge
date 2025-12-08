@@ -204,7 +204,8 @@ class Log
             // auto-detect site_key_id from request params if not provided
             if ($siteKeyId === null) {
                 $siteParam = $_REQUEST['site'] ?? $_REQUEST['site_url'] ?? null;
-                $apiKeyParam = $_REQUEST['api_key_server'] ?? $_REQUEST['api_key'] ?? null;
+                // Use canonical `oauth_bridge_api_key` only
+                $apiKeyParam = $_REQUEST['oauth_bridge_api_key'] ?? $_REQUEST['api_key'] ?? null;
                 if ($siteParam || $apiKeyParam) {
                     // use centralized SiteKey helper
                     try {
