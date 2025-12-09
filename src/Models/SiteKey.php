@@ -303,18 +303,116 @@ class SiteKey
         }
         try {
             $pdo = Database::getConnection();
-            if (!empty($site) && !empty($apiKey)) {
-                $stmt = $pdo->prepare('SELECT id FROM site_keys WHERE site_url = :site AND api_key = :api_key LIMIT 1');
-                $stmt->execute([':site' => rtrim((string)$site, '/'), ':api_key' => (string)$apiKey]);
-            } elseif (!empty($site)) {
+
+            // If an apiKey is provided, find row by api_key first (fast path) and then verify the site matches.
+            if (!empty($apiKey)) {
+                $stmt = $pdo->prepare('SELECT id, site_url, api_key, active FROM site_keys WHERE api_key = :api_key LIMIT 1');
+                $stmt->execute([':api_key' => (string)$apiKey]);
+                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($row && (int)($row['active'] ?? 0) === 1) {
+                    // if no site provided, api key is sufficient to identify the site_key
+                    if (empty($site)) {
+                        return (int)$row['id'];
+                    }
+                    // verify the provided site matches the stored site_url (exact or wildcard)
+                    $siteNoScheme = preg_replace('#^https?://#i', '', rtrim((string)$site, '/'));
+                    $pattern = rtrim($row['site_url'], '/');
+                    $patternNoScheme = preg_replace('#^https?://#i', '', $pattern);
+                    // exact match
+                    if (strcasecmp($patternNoScheme, $siteNoScheme) === 0) {
+                        return (int)$row['id'];
+                    }
+                    // wildcard/pattern match
+                    if (strpos($patternNoScheme, '*') !== false) {
+                        $patternsToTest = [$patternNoScheme];
+                        if (strpos($patternNoScheme, '*.') !== false) {
+                            $alt = str_replace('*.', '', $patternNoScheme);
+                            if ($alt !== $patternNoScheme) $patternsToTest[] = $alt;
+                        }
+                        $expanded = [];
+                        foreach ($patternsToTest as $p) {
+                            $expanded[] = $p;
+                            if (substr($p, -2) === '/*') {
+                                $expanded[] = substr($p, 0, -2);
+                            }
+                            if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                                $expanded[] = 'www.' . $p;
+                                if (substr($p, -2) === '/*') {
+                                    $expanded[] = 'www.' . substr($p, 0, -2);
+                                }
+                            }
+                        }
+                        $siteVariants = [$siteNoScheme];
+                        if (strpos($siteNoScheme, 'www.') === 0) {
+                            $siteVariants[] = substr($siteNoScheme, 4);
+                        } else {
+                            $siteVariants[] = 'www.' . $siteNoScheme;
+                        }
+                        foreach ($expanded as $pat) {
+                            foreach ($siteVariants as $siteCandidate) {
+                                if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD)) {
+                                    return (int)$row['id'];
+                                }
+                            }
+                        }
+                    }
+                    // api_key matched but site did not match -> do not return id
+                    return null;
+                }
+                // if api key present but not found/active, fallthrough to try site-only matching
+            }
+
+            // If no apiKey fast-path match, fall back to site-only exact / wildcard matching
+            if (!empty($site)) {
                 $stmt = $pdo->prepare('SELECT id FROM site_keys WHERE site_url = :site LIMIT 1');
                 $stmt->execute([':site' => rtrim((string)$site, '/')] );
-            } else {
-                return null;
-            }
-            $r = $stmt->fetch(\PDO::FETCH_ASSOC);
-            if ($r && isset($r['id'])) {
-                return (int)$r['id'];
+                $r = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($r && isset($r['id'])) return (int)$r['id'];
+
+                // No exact match: try wildcard/pattern matches against active rows
+                $siteNoScheme = preg_replace('#^https?://#i', '', rtrim((string)$site, '/'));
+                $stmt2 = $pdo->prepare('SELECT id, site_url, api_key, active FROM site_keys WHERE active = 1');
+                $stmt2->execute();
+                while ($row = $stmt2->fetch(\PDO::FETCH_ASSOC)) {
+                    if (empty($row['site_url'])) continue;
+                    $pattern = rtrim($row['site_url'], '/');
+                    $patternNoScheme = preg_replace('#^https?://#i', '', $pattern);
+                    if (strpos($patternNoScheme, '*') === false) continue;
+
+                    $patternsToTest = [$patternNoScheme];
+                    if (strpos($patternNoScheme, '*.') !== false) {
+                        $alt = str_replace('*.', '', $patternNoScheme);
+                        if ($alt !== $patternNoScheme) $patternsToTest[] = $alt;
+                    }
+                    $expanded = [];
+                    foreach ($patternsToTest as $p) {
+                        $expanded[] = $p;
+                        if (substr($p, -2) === '/*') {
+                            $expanded[] = substr($p, 0, -2);
+                        }
+                        if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                            $expanded[] = 'www.' . $p;
+                            if (substr($p, -2) === '/*') {
+                                $expanded[] = 'www.' . substr($p, 0, -2);
+                            }
+                        }
+                    }
+
+                    $siteVariants = [$siteNoScheme];
+                    if (strpos($siteNoScheme, 'www.') === 0) {
+                        $siteVariants[] = substr($siteNoScheme, 4);
+                    } else {
+                        $siteVariants[] = 'www.' . $siteNoScheme;
+                    }
+
+                    foreach ($expanded as $pat) {
+                        foreach ($siteVariants as $siteCandidate) {
+                            if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD)) {
+                                return (int)$row['id'];
+                            }
+                        }
+                    }
+                }
             }
         } catch (\Throwable $e) {
             // ignore and return null
