@@ -42,8 +42,8 @@ if (file_exists(__DIR__ . '/config/config.php')) {
 	require_once __DIR__ . '/config/config.php';
 }
 
-// Secure session (only if not already started)
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// Secure session (only if not already started and not running from CLI)
+if (PHP_SAPI !== 'cli' && session_status() !== PHP_SESSION_ACTIVE) {
 	$cookieParams = session_get_cookie_params();
 	// Choose secure flag: prefer explicit env var, fall back to HTTPS detection (including proxy header)
 	$secure = isset($_ENV['SESSION_SECURE']) ? filter_var($_ENV['SESSION_SECURE'], FILTER_VALIDATE_BOOLEAN) : (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'));
@@ -77,8 +77,8 @@ if (class_exists(Router::class)) {
 	};
 }
 
-// Load routes if available
-if (file_exists(__DIR__ . '/routes.php')) {
+// Load routes if available (skip when running in CLI to keep CLI scripts lightweight)
+if (PHP_SAPI !== 'cli' && file_exists(__DIR__ . '/routes.php')) {
 	require_once __DIR__ . '/routes.php';
 }
 

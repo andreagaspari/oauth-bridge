@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+// CLI script to cleanup logs older than N months (default 3)
+// Usage: bin/cleanup-logs [months]
+
+chdir(__DIR__ . '/..');
+require_once __DIR__ . '/../bootstrap.php';
+
+use Immaginificio\OAuthProxyBridge\Models\Log;
+
+$months = 3;
+if (isset($argv[1]) && is_numeric($argv[1])) {
+    $months = (int)$argv[1];
+}
+
+echo "Cleanup logs older than {$months} month(s)...\n";
+$result = Log::cleanupOlderThanMonths($months);
+if ($result === false) {
+    fwrite(STDERR, "Error: cleanup failed. Check logs.\n");
+    exit(2);
+}
+
+echo "Deleted rows: {$result}\n";
+exit(0);
