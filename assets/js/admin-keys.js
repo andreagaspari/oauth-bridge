@@ -268,12 +268,21 @@ document.addEventListener('DOMContentLoaded', function(){
             if(k.active){
               toggleBtn.className = 'c-btn c-btn--warning';
               toggleBtn.textContent = 'Revoca';
-              toggleBtn.addEventListener('click', async function(){
+              const doRevoke = async function(){
                 try{
                   const res = await fetch('/admin/keys/'+k.id+'/revoke', { method:'POST', credentials:'same-origin' });
                   if(res.ok){ window.showToast && window.showToast('Chiave revocata', {type:'success'}); loadKeys(); }
                   else { window.showToast && window.showToast('Revoca fallita', {type:'danger'}); }
                 }catch(e){ window.showToast && window.showToast('Errore di rete', {type:'danger'}); }
+              };
+
+              toggleBtn.addEventListener('click', function(){
+                const label = k.name || k.site_url || k.id || 'chiave';
+                if (window.Modal && typeof window.Modal.confirm === 'function'){
+                  window.Modal.confirm('Revocare la chiave '+label+'?<br/> Questa operazione disattiverà definitivamente la chiave e sarà necessario rigenerarne una nuova per riattivarla.', function(){ doRevoke(); });
+                } else {
+                  if (!confirm('Revocare la chiave '+label+'?')) return; doRevoke();
+                }
               });
             } else {
               toggleBtn.className = 'c-btn c-btn--success';
@@ -311,11 +320,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
             // Delete (kept)
             const del = document.createElement('button'); del.textContent='Elimina'; del.setAttribute('aria-label','Elimina chiave '+k.id); del.className='c-btn c-btn--danger';
+            const label = k.name || k.site_url || k.id || 'chiave';
             del.addEventListener('click', async function(){
               if (window.Modal && typeof window.Modal.confirm === 'function'){
-                window.Modal.confirm('Eliminare chiave '+k.id+'?', async function(){ await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys(); });
+                window.Modal.confirm('Eliminare chiave '+label+'?', async function(){ await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys(); });
               } else {
-                if (!confirm('Eliminare chiave '+k.id+'?')) return; await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys();
+                if (!confirm('Eliminare chiave '+label+'?')) return; await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys();
               }
             });
             cell.appendChild(del);

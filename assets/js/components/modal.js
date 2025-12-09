@@ -177,6 +177,38 @@ var Modal = (function(){
       container.appendChild(btn);
     });
   }
+  // sanitize minimal HTML for safe insertion into modal bodies
+  function sanitizeHtml(html){
+    try{
+      const template = document.createElement('template');
+      template.innerHTML = html;
+      const forbidden = ['script','iframe','object','embed','link','meta'];
+      const walk = (root)=>{
+        const children = Array.from(root.children || []);
+        children.forEach(child => {
+          const tag = child.tagName.toLowerCase();
+          if(forbidden.indexOf(tag) !== -1){
+            child.parentNode.removeChild(child);
+            return;
+          }
+          // remove potentially dangerous attributes
+          Array.from(child.attributes || []).forEach(attr => {
+            const name = attr.name.toLowerCase();
+            const val = attr.value || '';
+            if(name.startsWith('on')) child.removeAttribute(attr.name);
+            if((name === 'href' || name === 'src') && /^\s*javascript:/i.test(val)) child.removeAttribute(attr.name);
+            if(name === 'style') child.removeAttribute(attr.name);
+          });
+          walk(child);
+        });
+      };
+      walk(template.content);
+      return template.innerHTML;
+    }catch(e){
+      // fallback: escape
+      return String(html).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  }
 
   function close(){
     const root = document.querySelector('.c-modal');
@@ -200,10 +232,27 @@ var Modal = (function(){
   }
 
   // convenience confirm dialog: message string, onYes callback
-  function confirm(message, onYes){
+  // convenience confirm dialog:
+  // - message can be a string, an HTML string (if opts.allowHtml = true), or an Element
+  // - onYes callback executed when user confirms
+  // - opts: { allowHtml: boolean, title: string }
+  function confirm(message, onYes, opts = {}){
     const content = document.createElement('div');
-    const p = document.createElement('p'); p.textContent = message; content.appendChild(p);
-    open(content, { title: 'Conferma', actions: [
+    if(typeof message === 'string'){
+      const p = document.createElement('p');
+      if(opts.allowHtml){ p.innerHTML = sanitizeHtml(message); }
+      else { p.textContent = message; }
+      content.appendChild(p);
+    } else if(message instanceof Element){
+      content.appendChild(message);
+    } else if(message && message.nodeType){
+      // Node-like
+      content.appendChild(message);
+    } else {
+      const p = document.createElement('p'); p.textContent = String(message); content.appendChild(p);
+    }
+
+    open(content, { title: opts.title || 'Conferma', actions: [
       { label: 'Annulla', className: 'c-btn', onClick: function(){ close(); } },
       { label: 'Conferma', className: 'c-btn c-btn--primary', onClick: function(){ try{ if(typeof onYes === 'function') onYes(); } finally { close(); } } }
     ]});
