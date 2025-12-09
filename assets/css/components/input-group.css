@@ -1,5 +1,5 @@
 /* Input group (addon right) */
 .c-input-group{position:relative}
 .c-input-group .c-field__control{padding-right:44px}
-.c-input-group .c-input-addon{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center}
+.c-input-group .c-input-addon{position:absolute;right:1px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center}
 .c-input-addon .c-icon{width:20px;height:20px}

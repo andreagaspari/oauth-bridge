@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 input.style.fontFamily = 'monospace';
                 // icon button (copy) - we'll inline svg if possible (use top-level ensureInlineSvg)
                 const addon = document.createElement('div'); addon.className = 'c-input-addon';
-                const copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'c-btn c-icon-btn'; copyBtn.setAttribute('aria-label','Copia chiave');
+                const copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'c-btn c-icon-btn c-btn--primary'; copyBtn.setAttribute('aria-label','Copia chiave');
                 ensureInlineSvg('/assets/imgs/copy.svg', copyBtn);
                 copyBtn.addEventListener('click', function(){
                   if(navigator.clipboard){ navigator.clipboard.writeText(input.value).then(()=>{ window.showToast && window.showToast('Copiato', {type:'success'}); }).catch(()=>{ window.showToast && window.showToast('Copia fallita', {type:'danger'}); });
