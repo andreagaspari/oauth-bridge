@@ -47,12 +47,15 @@ document.addEventListener('DOMContentLoaded', function(){
         const values = [u.id, u.email, u.name||'', u.is_admin? 'Sì':'No', u.created_at, ''];
         const row = document.createElement('div'); row.className = 'c-grid__row';
         values.forEach((v, idx)=>{
-            const cell = document.createElement('div'); cell.className='c-grid__cell';
-            // add data-label for mobile stacked layout
-            cell.setAttribute('data-label', headers[idx] || '');
-            if(idx<5) { cell.textContent = v; }
+          const cell = document.createElement('div'); cell.className='c-grid__cell';
+          // add data-label for mobile stacked layout
+          cell.setAttribute('data-label', headers[idx] || '');
+          if(idx<5) { 
+            cell.textContent = v; }
           else {
             // actions cell
+            cell.classList.add('c-grid__cell--actions');
+
             if (data.current_user_id && data.current_user_id === u.id){
               const btn = document.createElement('button'); btn.textContent='Modifica'; btn.className='c-btn c-btn--secondary'; btn.addEventListener('click', ()=> editProfile(u)); cell.appendChild(btn);
             } else {
@@ -155,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function(){
               btn.setAttribute('aria-label', 'Mostra password');
             } else {
               // fallback: create a minimal toggle button (no SVG markup duplication)
-              btn = document.createElement('button'); btn.type = 'button'; btn.className = 'c-icon-btn'; btn.setAttribute('data-toggle', 'password'); btn.setAttribute('data-target', '#' + inputId); btn.setAttribute('aria-label', 'Mostra password'); btn.id = 'toggle_' + inputId;
+              btn = document.createElement('button'); btn.type = 'button'; btn.className = 'c-btn c-icon-btn'; btn.setAttribute('data-toggle', 'password'); btn.setAttribute('data-target', '#' + inputId); btn.setAttribute('aria-label', 'Mostra password'); btn.id = 'toggle_' + inputId;
               // append an empty placeholder icon; CSS will handle display
               const span = document.createElement('span'); span.className = 'c-icon'; span.textContent = '👁'; btn.appendChild(span);
               addon.appendChild(btn);

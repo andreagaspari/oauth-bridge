@@ -40,7 +40,7 @@ $version = 'v0.0.01';
   <div class="admin-shell" id="adminShell">
     <header class="admin-header">
       <div class="left">
-        <button class="c-icon-btn hamburger" id="hamburgerBtn" aria-label="Apri menu">
+        <button class="c-btn c-icon-btn hamburger" id="hamburgerBtn" aria-label="Apri menu">
           <?php echo Svg::inline('menu.svg', ['class'=>'hamburger-icon c-icon','aria-hidden'=>'true']); ?>
           <span class="sr-only">Menu</span>
         </button>

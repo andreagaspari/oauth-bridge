@@ -45,7 +45,7 @@
             <div class="c-input-group">
               <input id="passwordInput" class="c-field__control" type="password" name="password" required />
               <div class="c-input-addon">
-                <button type="button" id="togglePwd" class="c-icon-btn" data-toggle="password" data-target="#passwordInput" aria-label="Mostra password">
+                <button type="button" id="togglePwd" class="c-btn c-icon-btn" data-toggle="password" data-target="#passwordInput" aria-label="Mostra password">
                   <?php
                   use Immaginificio\OAuthProxyBridge\Core\Svg;
                   // include both states, JS will toggle visibility via .is-open class

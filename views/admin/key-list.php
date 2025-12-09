@@ -59,7 +59,7 @@
       </div>
       <div class="c-card__body">
         <div class="filters-modal-bar" style="margin-bottom:8px;display:none;">
-          <button id="openFiltersBtn" class="c-icon-btn filters-open-btn" type="button">
+          <button id="openFiltersBtn" class="c-btn c-icon-btn filters-open-btn" type="button">
             <?php echo Svg::inline('filter.svg', ['class' => 'c-icon', 'aria-hidden' => 'true']); ?>
             <span class="label">Filtri</span>
           </button>

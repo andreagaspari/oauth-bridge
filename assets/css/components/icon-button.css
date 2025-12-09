@@ -1,5 +1,5 @@
 /* Icon button (square) */
-.c-icon-btn{background:transparent;border: 1px solid var(--overlay-05);padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:inherit;gap:6px;}
+.c-icon-btn{border: 1px solid var(--overlay-05);padding:6px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;gap:6px;}
 .c-icon-btn svg{width:18px;height:18px;display:block}
 
 /* Eye icon visibility for password toggle

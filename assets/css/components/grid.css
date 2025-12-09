@@ -18,7 +18,7 @@
 .c-grid__header{font-weight:800;color:var(--text);font-size:13px;padding:12px 8px;text-transform:none}
 .c-grid__cell{padding:8px;font-size:14px;border-bottom:1px solid var(--overlay-02)}
 .c-grid__cell--truncate{max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
+.c-grid__cell--actions{display:flex;gap:var(--gap);justify-content:flex-start;align-items:center}
 /* Alternate row backgrounds to aid readability */
 .c-grid__row:not(.c-grid__header-row):nth-of-type(even){background:rgba(255,255,255,0.01)}
 
@@ -39,7 +39,7 @@
 
   /* For actions cell on mobile: hide the label and right-align the buttons to save space */
   .c-grid__cell--actions::before{display:none}
-  .c-grid__cell--actions .keys-actions{justify-content:flex-end;gap:8px;width:100%}
+  .c-grid__cell--actions{justify-content:flex-end;gap:8px;width:100%}
 }
 
 /* Filter toggle toolbar: hidden by default; shown on small screens as a fallback */
