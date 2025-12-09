@@ -14,7 +14,6 @@
 	- make inline icon buttons (copy) appear icon-only and unobtrusive
 */
 .c-modal .c-field__control{background:transparent;color:inherit;border-color:var(--overlay-06)}
-.c-modal .c-input-addon .c-icon-btn{background:transparent;border:none;padding:6px}
 
 /* Payload display in modal: preformatted and scrollable */
 .c-log-payload__pre{white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;font-size:13px;background:var(--overlay-01);padding:12px;border-radius:6px;border:1px solid var(--overlay-02);overflow:auto;max-height:55vh}

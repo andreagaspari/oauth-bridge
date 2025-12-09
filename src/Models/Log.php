@@ -316,4 +316,29 @@ class Log
             return false;
         }
     }
+
+    /**
+     * Delete logs older than the given number of months.
+     * Returns the number of deleted rows on success, or false on error.
+     *
+     * @param int $months
+     * @return int|false
+     * @since 0.1.01
+     */
+    public static function cleanupOlderThanMonths(int $months)
+    {
+        try {
+            $m = max(0, (int)$months);
+            if ($m === 0) return 0;
+            $pdo = Database::getConnection();
+            // Build query with integer interpolation (safe after casting)
+            $sql = "DELETE FROM logs WHERE created_at < DATE_SUB(NOW(), INTERVAL {$m} MONTH)";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->rowCount();
+        } catch (\Throwable $e) {
+            error_log('Log::cleanupOlderThanMonths error: ' . $e->getMessage());
+            return false;
+        }
+    }
 }

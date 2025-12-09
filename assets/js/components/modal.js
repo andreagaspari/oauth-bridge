@@ -1,6 +1,9 @@
 // Modal component: minimal API
 var Modal = (function(){
   let escHandler = null;
+  let enterHandler = null;
+
+  // -- debug removed --
 
   function ensureRoot(){
     let root = document.querySelector('.c-modal');
@@ -78,9 +81,40 @@ var Modal = (function(){
         cancel.addEventListener('click', () => close());
         footer.appendChild(cancel);
 
+        // Create a hidden native submit button inside the form so that the footer Save
+        // can trigger a submission with a proper submitter element even though it
+        // is rendered outside the <form>. This makes Enter behavior consistent.
+        let hiddenSubmit = form.querySelector('button[data-modal-hidden-submit-real]');
+        if (!hiddenSubmit) {
+          try {
+            hiddenSubmit = document.createElement('button');
+            hiddenSubmit.type = 'submit';
+            hiddenSubmit.style.display = 'none';
+            hiddenSubmit.setAttribute('data-modal-hidden-submit-real', '1');
+            form.appendChild(hiddenSubmit);
+          } catch (e) { hiddenSubmit = null; }
+        }
+
         const save = document.createElement('button'); save.type = 'button'; save.className = 'c-btn c-btn--primary'; save.textContent = 'Salva';
         save.addEventListener('click', () => {
-          if (typeof form.requestSubmit === 'function') form.requestSubmit(); else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+          try {
+              if (!form) return;
+              // If form is invalid, report and abort before triggering
+              if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+                if (typeof form.reportValidity === 'function') form.reportValidity();
+                return;
+              }
+            // Prefer requestSubmit with the hidden submit as submitter when available
+            if (typeof form.requestSubmit === 'function') {
+              if (hiddenSubmit) form.requestSubmit(hiddenSubmit); else form.requestSubmit();
+            } else if (hiddenSubmit) {
+              hiddenSubmit.click();
+            } else {
+              form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }
+          } catch (e) {
+            try { if (hiddenSubmit) hiddenSubmit.click(); else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); } catch (er) {}
+          }
         });
         footer.appendChild(save);
       }
@@ -109,6 +143,28 @@ var Modal = (function(){
       close();
     };
     document.addEventListener('keydown', escHandler);
+
+    // Prevent Enter from closing the modal when a form inside the modal is invalid.
+    // Some browsers may trigger click on focused buttons or submit behaviour on Enter
+    // — intercept keydown and stop it when the form.reportValidity() fails.
+    enterHandler = function(e){
+      if (e.key !== 'Enter') return;
+      try {
+        const body = document.querySelector('.c-modal__body');
+        if (!body) return;
+        const formEl = body.querySelector('form');
+        if (!formEl) return;
+        const valid = (typeof formEl.checkValidity === 'function') ? formEl.checkValidity() : true;
+        if (!valid) {
+          if (typeof formEl.reportValidity === 'function') formEl.reportValidity();
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      } catch (err) {
+        // ignore and allow default behaviour if anything goes wrong
+      }
+    };
+    document.addEventListener('keydown', enterHandler, true);
 
     root.classList.add('is-open');
     return root;
@@ -139,6 +195,8 @@ var Modal = (function(){
     }
     // remove esc handler
     if(escHandler){ document.removeEventListener('keydown', escHandler); escHandler = null; }
+    // remove enter handler
+    if(enterHandler){ document.removeEventListener('keydown', enterHandler, true); enterHandler = null; }
   }
 
   // convenience confirm dialog: message string, onYes callback

@@ -1,29 +1,31 @@
 /* Button */
 .c-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--overlay-05);background:transparent;color:inherit;cursor:pointer;font-weight:600}
+.c-btn:hover{filter:brightness(0.95)}
 .c-btn:focus, .c-btn:focus-visible{
 	outline: none;
-	border-color: var(--accent);
+	border-color: var(--primary);
 	box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
 }
 
 /* Icon-only buttons focus (slightly lighter ring) */
 .c-icon-btn:focus, .c-icon-btn:focus-visible{
 	outline: none;
-	border-color: var(--accent);
+	border-color: var(--primary);
 	box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
 }
-.c-btn--primary{background:var(--accent);color:var(--accent-text, var(--text));border-color:transparent}
 .c-btn--icon{padding:6px;border-radius:10px;width:36px;height:36px}
 
-/* Danger variant for destructive actions */
-.c-btn--danger{background:var(--danger, #e02424);color:var(--text-on-danger, #fff);border-color:transparent}
-.c-btn--danger:hover{filter:brightness(0.95)}
-
-/* Success and Warning variants */
+/* Button  variants */
+.c-btn--primary{background:var(--primary);color:var(--primary-text, var(--text));border-color:transparent}
+.c-btn--secondary{background:var(--secondary);color:var(--secondary-text, var(--text));border-color:transparent}
+/* Success variant for positive actions */
 .c-btn--success{background:var(--success);color:var(--success-text, #fff);border-color:transparent}
-.c-btn--success:hover{filter:brightness(0.98)}
+/* Warning variant for cautionary actions */
 .c-btn--warning{background:var(--warning);color:var(--warning-text, #fff);border-color:transparent}
-.c-btn--warning:hover{filter:brightness(0.98)}
+/* Danger variant for destructive actions */
+.c-btn--danger{background:var(--danger, #e02424);color:var(--danger-text, #fff);border-color:transparent}
+/* Info variant for informational actions */
+.c-btn--info{background:var(--info);color:var(--info-text, #fff);border-color:transparent}
 
 /* Ensure primary buttons show a visible focus ring even though their border is transparent */
 .c-btn--primary:focus, .c-btn--primary:focus-visible{

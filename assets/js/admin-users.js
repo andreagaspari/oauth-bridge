@@ -47,16 +47,19 @@ document.addEventListener('DOMContentLoaded', function(){
         const values = [u.id, u.email, u.name||'', u.is_admin? 'Sì':'No', u.created_at, ''];
         const row = document.createElement('div'); row.className = 'c-grid__row';
         values.forEach((v, idx)=>{
-            const cell = document.createElement('div'); cell.className='c-grid__cell';
-            // add data-label for mobile stacked layout
-            cell.setAttribute('data-label', headers[idx] || '');
-            if(idx<5) { cell.textContent = v; }
+          const cell = document.createElement('div'); cell.className='c-grid__cell';
+          // add data-label for mobile stacked layout
+          cell.setAttribute('data-label', headers[idx] || '');
+          if(idx<5) { 
+            cell.textContent = v; }
           else {
             // actions cell
+            cell.classList.add('c-grid__cell--actions');
+
             if (data.current_user_id && data.current_user_id === u.id){
-              const btn = document.createElement('button'); btn.textContent='Modifica'; btn.className='c-btn'; btn.addEventListener('click', ()=> editProfile(u)); cell.appendChild(btn);
+              const btn = document.createElement('button'); btn.textContent='Modifica'; btn.className='c-btn c-btn--secondary'; btn.addEventListener('click', ()=> editProfile(u)); cell.appendChild(btn);
             } else {
-              const editBtn = document.createElement('button'); editBtn.textContent='Modifica'; editBtn.className='c-btn'; editBtn.addEventListener('click', ()=> editProfile(u)); cell.appendChild(editBtn);
+              const editBtn = document.createElement('button'); editBtn.textContent='Modifica'; editBtn.className='c-btn c-btn--secondary'; editBtn.addEventListener('click', ()=> editProfile(u)); cell.appendChild(editBtn);
               const del = document.createElement('button'); del.textContent='Elimina'; del.setAttribute('aria-label','Elimina utente '+u.id); del.className='c-btn c-btn--danger'; del.addEventListener('click', ()=> deleteUser(u.id)); cell.appendChild(del);
             }
           }
@@ -98,6 +101,21 @@ document.addEventListener('DOMContentLoaded', function(){
     node.addEventListener('submit', async function(e){
       e.preventDefault();
       const form = e.target;
+      // HTML5 validity check (stop if invalid)
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        // show native validation UI
+        if (typeof form.reportValidity === 'function') form.reportValidity();
+        return;
+      }
+
+      // validate password confirmation if present
+      if (form.password && form.password.value) {
+        if (form.password_confirm && form.password_confirm.value !== form.password.value) {
+          window.showToast && window.showToast('Le password non corrispondono', { type: 'danger' });
+          return;
+        }
+      }
+
       const payload = { email: form.email.value, name: form.name.value };
       if(form.password && form.password.value) payload.password = form.password.value;
       payload.is_admin = form.is_admin.checked ? 1 : 0;
@@ -111,6 +129,73 @@ document.addEventListener('DOMContentLoaded', function(){
     }, { once: true });
     const title = user && user.id ? 'Modifica utente' : 'Crea utente';
     window.Modal && window.Modal.open(node, { title });
+
+    // After modal is open, initialize password toggles for inputs inside the modal
+    try {
+      const modalBody = document.querySelector('.c-modal__body');
+      if (modalBody) {
+        const formInModal = modalBody.querySelector('form');
+        if (formInModal) {
+          ['password','password_confirm'].forEach(name => {
+            const input = formInModal.querySelector('[name="' + name + '"]');
+            if (!input) return;
+            // ensure unique id
+            const uid = 'uid' + Date.now() + Math.floor(Math.random()*1000);
+            const inputId = name + '_' + uid;
+            input.id = inputId;
+            // find addon container if present
+            let addon = input.parentNode.querySelector('.c-input-addon');
+            if (!addon) {
+              // fallback: create an absolute addon and append after input
+              addon = document.createElement('div'); addon.className = 'c-input-addon'; input.parentNode.appendChild(addon);
+            }
+            // try to find an existing toggle button rendered server-side
+            let btn = addon.querySelector('.js-toggle-password');
+            if (btn) {
+              // set attributes expected by the toggle component
+              btn.setAttribute('data-target', '#' + inputId);
+              btn.id = 'toggle_' + inputId;
+              btn.setAttribute('aria-label', 'Mostra password');
+            } else {
+              // fallback: create a minimal toggle button (no SVG markup duplication)
+              btn = document.createElement('button'); btn.type = 'button'; btn.className = 'c-btn c-icon-btn'; btn.setAttribute('data-toggle', 'password'); btn.setAttribute('data-target', '#' + inputId); btn.setAttribute('aria-label', 'Mostra password'); btn.id = 'toggle_' + inputId;
+              // append an empty placeholder icon; CSS will handle display
+              const span = document.createElement('span'); span.className = 'c-icon'; span.textContent = '👁'; btn.appendChild(span);
+              addon.appendChild(btn);
+            }
+            // initialize component
+            try { if (window.Components && typeof window.Components.togglePassword === 'function') { window.Components.togglePassword('#' + btn.id, '#' + inputId); } } catch(e) {}
+            // add HTML5 custom validity handling so checkValidity() accounts for password confirmation
+            try {
+              const formEl = formInModal;
+              const pwdEl = formEl.querySelector('[name="password"]');
+              const confirmEl = formEl.querySelector('[name="password_confirm"]');
+              if (pwdEl && confirmEl) {
+                const validate = function(){
+                  try {
+                    if (pwdEl.value && pwdEl.value.length > 0) {
+                      confirmEl.required = true;
+                      if (confirmEl.value !== pwdEl.value) {
+                        confirmEl.setCustomValidity('Le password non corrispondono');
+                      } else {
+                        confirmEl.setCustomValidity('');
+                      }
+                    } else {
+                      confirmEl.required = false;
+                      confirmEl.setCustomValidity('');
+                    }
+                  } catch (e) { }
+                };
+                pwdEl.addEventListener('input', validate);
+                confirmEl.addEventListener('input', validate);
+                // initial validation run
+                validate();
+              }
+            } catch (e) {}
+          });
+        }
+      }
+    } catch (e) {}
   }
 
   document.getElementById('openCreateUserBtn')?.addEventListener('click', function(){ openUserForm(); });

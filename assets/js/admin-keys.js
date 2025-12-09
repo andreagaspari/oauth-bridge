@@ -150,10 +150,11 @@ document.addEventListener('DOMContentLoaded', function(){
         } else if(idx<3) { cell.textContent = v; }
         else if(idx === 5){
             // Actions: Show, Revoke/Activate, Regenerate, Delete
-              const actions = document.createElement('div'); actions.className = 'keys-actions'; actions.style.display='flex'; actions.style.gap='8px'; actions.style.alignItems='center';
             // Show key (inline input + copy icon)
-            const showBtn = document.createElement('button'); showBtn.className='c-btn'; showBtn.title='Mostra chiave';
-            showBtn.innerHTML = '<span class="label">Mostra</span>';
+            const showBtn = document.createElement('button'); showBtn.className='c-btn c-icon-btn c-btn--primary'; showBtn.title='Mostra chiave';
+            showBtn.setAttribute('aria-label', 'Mostra chiave');
+            // inline the eye-open svg instead of a text label for a compact icon button
+            ensureInlineSvg('/assets/imgs/eye-open.svg', showBtn);
             showBtn.addEventListener('click', async function(){
               try{
                 const res = await fetch('/admin/keys/'+k.id+'/show', { credentials: 'same-origin' });
@@ -167,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 input.style.fontFamily = 'monospace';
                 // icon button (copy) - we'll inline svg if possible (use top-level ensureInlineSvg)
                 const addon = document.createElement('div'); addon.className = 'c-input-addon';
-                const copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'c-icon-btn'; copyBtn.setAttribute('aria-label','Copia chiave');
+                const copyBtn = document.createElement('button'); copyBtn.type = 'button'; copyBtn.className = 'c-btn c-icon-btn c-btn--primary'; copyBtn.setAttribute('aria-label','Copia chiave');
                 ensureInlineSvg('/assets/imgs/copy.svg', copyBtn);
                 copyBtn.addEventListener('click', function(){
                   if(navigator.clipboard){ navigator.clipboard.writeText(input.value).then(()=>{ window.showToast && window.showToast('Copiato', {type:'success'}); }).catch(()=>{ window.showToast && window.showToast('Copia fallita', {type:'danger'}); });
@@ -182,10 +183,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 setTimeout(()=>{ try{ input.select(); }catch(e){} }, 50);
               }catch(err){ window.showToast && window.showToast('Errore recupero chiave', {type:'danger'}); }
             });
-            actions.appendChild(showBtn);
+            cell.appendChild(showBtn);
 
             // Edit button
-            const editBtn = document.createElement('button'); editBtn.className='c-btn'; editBtn.textContent='Modifica';
+            const editBtn = document.createElement('button'); editBtn.className='c-btn c-btn--secondary'; editBtn.textContent='Modifica';
             editBtn.addEventListener('click', function(){
               // build edit form prefilled with values
               const wrapper = document.createElement('form'); wrapper.style.display='flex'; wrapper.style.flexDirection='column'; wrapper.style.gap='12px';
@@ -260,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
               window.Modal && window.Modal.open(wrapper, { title: 'Modifica chiave' });
             });
-            actions.appendChild(editBtn);
+            cell.appendChild(editBtn);
 
             // Revoke (if active) or Rigenera (if inactive) — single toggle button
             const toggleBtn = document.createElement('button');
@@ -288,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function(){
                   const input = document.createElement('input'); input.className = 'c-field__control'; input.type = 'text'; input.readOnly = true; input.value = j.api_key;
                   input.style.fontFamily = 'monospace';
                   const addon = document.createElement('div'); addon.className = 'c-input-addon';
-                  const copyBtn = document.createElement('button'); copyBtn.type='button'; copyBtn.className='c-icon-btn'; copyBtn.setAttribute('aria-label','Copia chiave e chiudi');
+                  const copyBtn = document.createElement('button'); copyBtn.type='button'; copyBtn.className='c-btn c-icon-btn'; copyBtn.setAttribute('aria-label','Copia chiave e chiudi');
                   ensureInlineSvg('/assets/imgs/copy.svg', copyBtn);
                   copyBtn.addEventListener('click', function(){
                     if(navigator.clipboard){ navigator.clipboard.writeText(input.value).then(()=>{ window.showToast && window.showToast('Copiato', {type:'success'}); window.Modal && window.Modal.close(); }).catch(()=>{ window.showToast && window.showToast('Copia fallita', {type:'danger'}); });
@@ -306,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function(){
             }
 
             // attach toggle into actions
-            actions.appendChild(toggleBtn);
+            cell.appendChild(toggleBtn);
 
             // Delete (kept)
             const del = document.createElement('button'); del.textContent='Elimina'; del.setAttribute('aria-label','Elimina chiave '+k.id); del.className='c-btn c-btn--danger';
@@ -317,11 +318,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 if (!confirm('Eliminare chiave '+k.id+'?')) return; await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys();
               }
             });
-            actions.appendChild(del);
+            cell.appendChild(del);
 
                 // mark this cell as actions so mobile CSS can hide the label
-                cell.classList.add('c-grid__cell--actions');
-                cell.appendChild(actions);
+              cell.classList.add('c-grid__cell--actions');
         }
         row.appendChild(cell);
       });
