@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function(){
             // Actions: Show, Revoke/Activate, Regenerate, Delete
               const actions = document.createElement('div'); actions.className = 'keys-actions'; actions.style.display='flex'; actions.style.gap='8px'; actions.style.alignItems='center';
             // Show key (inline input + copy icon)
-            const showBtn = document.createElement('button'); showBtn.className='c-btn'; showBtn.title='Mostra chiave';
+            const showBtn = document.createElement('button'); showBtn.className='c-btn c-btn--primary'; showBtn.title='Mostra chiave';
             showBtn.innerHTML = '<span class="label">Mostra</span>';
             showBtn.addEventListener('click', async function(){
               try{
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function(){
             actions.appendChild(showBtn);
 
             // Edit button
-            const editBtn = document.createElement('button'); editBtn.className='c-btn'; editBtn.textContent='Modifica';
+            const editBtn = document.createElement('button'); editBtn.className='c-btn c-btn--secondary'; editBtn.textContent='Modifica';
             editBtn.addEventListener('click', function(){
               // build edit form prefilled with values
               const wrapper = document.createElement('form'); wrapper.style.display='flex'; wrapper.style.flexDirection='column'; wrapper.style.gap='12px';

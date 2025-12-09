@@ -11,14 +11,18 @@
   --panel: #111827; /* panels / header / footer */
   --text: #e6eef8; /* primary text */
   --muted: #9ca3af; /* muted text / labels */
-  --accent: #3b82f6; /* primary accent */
-  --accent-text: #e0f2fe; /* text on accent bg */
+  --primary: #3b82f6; /* primary accent */
+  --primary-text: #e0f2fe; /* text on accent bg */
+  --secondary: #6b7280; /* secondary accent */
+  --secondary-text: #d1d5db; /* text on secondary bg */
   --danger: #5c0e0e; /* error / danger */
   --danger-text: #ffb4b4; /* text on danger bg */
   --success: #166534; /* success */
   --success-text: #d1fae5; /* text on success bg */
   --warning: #854d0e; /* warning */
   --warning-text: #ffedd5; /* text on warning bg */
+  --info: #0e7490; /* info */
+  --info-text: #d0f0fd; /* text on info bg */
 
   /* Card fallback */
   --card-bg: #0b1220;

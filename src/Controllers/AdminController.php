@@ -612,12 +612,25 @@ class AdminController
         $body = $request->json() ?? $request->all();
         $email = $body['email'] ?? null;
         $password = $body['password'] ?? null;
+        $passwordConfirm = $body['password_confirm'] ?? null;
         $name = $body['name'] ?? null;
         $isAdmin = isset($body['is_admin']) ? (bool)$body['is_admin'] : false;
 
         if (!$email || !$password) {
             $response->status(400)->json(['error' => 'missing_fields']);
             return;
+        }
+
+        // server-side password confirmation check
+        if ($password !== null) {
+            if ($passwordConfirm === null) {
+                $response->status(400)->json(['error' => 'missing_password_confirm']);
+                return;
+            }
+            if ($password !== $passwordConfirm) {
+                $response->status(400)->json(['error' => 'password_mismatch']);
+                return;
+            }
         }
 
         $id = User::create($email, $password, $name, $isAdmin);
@@ -676,6 +689,7 @@ class AdminController
         $data = [];
         if (isset($body['name'])) { $data['name'] = $body['name']; }
         if (!empty($body['password'])) { $data['password'] = $body['password']; }
+        $passwordConfirm = $body['password_confirm'] ?? null;
         // admins may update email and is_admin when editing other users
         if (isset($body['email'])) { $data['email'] = $body['email']; }
         if (isset($body['is_admin'])) { $data['is_admin'] = (int)$body['is_admin']; }
@@ -696,6 +710,18 @@ class AdminController
             $existing = User::findByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 $response->status(400)->json(['error' => 'email_taken']);
+                return;
+            }
+        }
+
+        // if password is being updated, ensure confirmation matches
+        if (isset($data['password'])) {
+            if ($passwordConfirm === null) {
+                $response->status(400)->json(['error' => 'missing_password_confirm']);
+                return;
+            }
+            if ($data['password'] !== $passwordConfirm) {
+                $response->status(400)->json(['error' => 'password_mismatch']);
                 return;
             }
         }

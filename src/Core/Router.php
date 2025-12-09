@@ -150,7 +150,7 @@ class Router
         if (!empty($allowedMethodsForUri) && $matchedAny) {
             $allow = implode(', ', array_unique($allowedMethodsForUri));
             header('Allow: ' . $allow);
-            $response->status(405)->send('Method Not Allowed');
+            $this->renderError($response, $request, 405, 'Method Not Allowed');
             return;
         }
 
@@ -177,8 +177,9 @@ class Router
         // Resolve path to views/errors/<code>.php
         $viewsFile = dirname(__DIR__, 2) . '/views/errors/' . $code . '.php';
 
-        if ($request->acceptsHtml() && file_exists($viewsFile)) {
-            // include the error template (server-side include)
+        // If an error view exists, include it. The view (errors-layout.php)
+        // is responsible for deciding whether to render HTML or JSON.
+        if (file_exists($viewsFile)) {
             include $viewsFile;
             return;
         }

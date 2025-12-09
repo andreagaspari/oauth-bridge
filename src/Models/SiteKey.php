@@ -26,6 +26,8 @@ class SiteKey
     {
         // Normalize site
         $site = rtrim($site, '/');
+        // remove scheme for matching convenience
+        $siteNoScheme = preg_replace('#^https?://#i', '', $site);
 
         // 1) Check DB table if available
         try {
@@ -62,11 +64,127 @@ class SiteKey
             // ignore DB errors; fallback to other sources
         }
 
+        // If exact DB match failed, try wildcard/pattern matches against active rows
+        try {
+            if (class_exists(Database::class)) {
+                $pdo = Database::getConnection();
+                $stmt = $pdo->prepare('SELECT id, api_key, active, providers, site_url FROM site_keys WHERE active = 1');
+                $stmt->execute();
+                while ($r = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                    if (empty($r['site_url']) || !hash_equals($r['api_key'] ?? '', $apiKey)) {
+                        continue;
+                    }
+                    $pattern = rtrim($r['site_url'], '/');
+                    $patternNoScheme = preg_replace('#^https?://#i', '', $pattern);
+                    // If pattern contains wildcard, try fnmatch against site without scheme
+                    if (strpos($patternNoScheme, '*') !== false) {
+                        // build candidate patterns and site variants
+                        $patternsToTest = [$patternNoScheme];
+                        if (strpos($patternNoScheme, '*.') !== false) {
+                            $alt = str_replace('*.', '', $patternNoScheme);
+                            if ($alt !== $patternNoScheme) {
+                                $patternsToTest[] = $alt;
+                            }
+                        }
+
+                        // expand candidates (with/without trailing /* and with www. where sensible)
+                        $expanded = [];
+                        foreach ($patternsToTest as $p) {
+                            $expanded[] = $p;
+                            if (substr($p, -2) === '/*') {
+                                $expanded[] = substr($p, 0, -2);
+                            }
+                            if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                                $expanded[] = 'www.' . $p;
+                                if (substr($p, -2) === '/*') {
+                                    $expanded[] = 'www.' . substr($p, 0, -2);
+                                }
+                            }
+                        }
+
+                        // prepare site variants (with and without www.)
+                        $siteVariants = [$siteNoScheme];
+                        if (strpos($siteNoScheme, 'www.') === 0) {
+                            $siteVariants[] = substr($siteNoScheme, 4);
+                        } else {
+                            $siteVariants[] = 'www.' . $siteNoScheme;
+                        }
+
+                        // test all combinations
+                        foreach ($expanded as $pat) {
+                            foreach ($siteVariants as $siteCandidate) {
+                                if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD)) {
+                                    // provider restriction check
+                                    if ($provider !== null) {
+                                        $providers = [];
+                                        if (!empty($r['providers'])) {
+                                            $decoded = json_decode($r['providers'], true);
+                                            if (is_array($decoded)) $providers = $decoded;
+                                        }
+                                        if (!empty($providers) && !in_array($provider, $providers, true)) {
+                                            try {
+                                                if (class_exists(Log::class)) {
+                                                    Log::record($site, $provider, 'invalid_provider', ['api_key_last6' => substr($apiKey, -6)], null, (int)$r['id']);
+                                                }
+                                            } catch (\Throwable $e) {}
+                                            continue;
+                                        }
+                                    }
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {}
+
         // 2) env SITE_KEYS as JSON
         if (!empty($_ENV['SITE_KEYS'])) {
             $map = json_decode($_ENV['SITE_KEYS'], true);
-            if (is_array($map) && isset($map[$site]) && hash_equals($map[$site], $apiKey)) {
-                return true;
+            if (is_array($map)) {
+                // Direct exact key
+                if (isset($map[$site]) && hash_equals($map[$site], $apiKey)) {
+                    return true;
+                }
+                // Try wildcard patterns
+                foreach ($map as $pattern => $keyVal) {
+                    if (strpos($pattern, '*') === false) continue;
+                    $patternNoScheme = preg_replace('#^https?://#i', '', rtrim($pattern, '/'));
+                    $patternsToTest = [$patternNoScheme];
+                    if (strpos($patternNoScheme, '*.') !== false) {
+                        $alt = str_replace('*.', '', $patternNoScheme);
+                        if ($alt !== $patternNoScheme) $patternsToTest[] = $alt;
+                    }
+                    $expanded = [];
+                    foreach ($patternsToTest as $p) {
+                        $expanded[] = $p;
+                        if (substr($p, -2) === '/*') {
+                            $expanded[] = substr($p, 0, -2);
+                        }
+                        if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                            $expanded[] = 'www.' . $p;
+                            if (substr($p, -2) === '/*') {
+                                $expanded[] = 'www.' . substr($p, 0, -2);
+                            }
+                        }
+                    }
+
+                    $siteVariants = [$siteNoScheme];
+                    if (strpos($siteNoScheme, 'www.') === 0) {
+                        $siteVariants[] = substr($siteNoScheme, 4);
+                    } else {
+                        $siteVariants[] = 'www.' . $siteNoScheme;
+                    }
+
+                    foreach ($expanded as $pat) {
+                        foreach ($siteVariants as $siteCandidate) {
+                            if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD) && hash_equals($keyVal, $apiKey)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -74,6 +192,43 @@ class SiteKey
         if (defined('SITE_KEYS') && is_array(SITE_KEYS)) {
             if (isset(SITE_KEYS[$site]) && hash_equals(SITE_KEYS[$site], $apiKey)) {
                 return true;
+            }
+            foreach (SITE_KEYS as $pattern => $keyVal) {
+                if (strpos($pattern, '*') === false) continue;
+                $patternNoScheme = preg_replace('#^https?://#i', '', rtrim($pattern, '/'));
+                $patternsToTest = [$patternNoScheme];
+                if (strpos($patternNoScheme, '*.') !== false) {
+                    $alt = str_replace('*.', '', $patternNoScheme);
+                    if ($alt !== $patternNoScheme) $patternsToTest[] = $alt;
+                }
+                $expanded = [];
+                foreach ($patternsToTest as $p) {
+                    $expanded[] = $p;
+                    if (substr($p, -2) === '/*') {
+                        $expanded[] = substr($p, 0, -2);
+                    }
+                    if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                        $expanded[] = 'www.' . $p;
+                        if (substr($p, -2) === '/*') {
+                            $expanded[] = 'www.' . substr($p, 0, -2);
+                        }
+                    }
+                }
+
+                $siteVariants = [$siteNoScheme];
+                if (strpos($siteNoScheme, 'www.') === 0) {
+                    $siteVariants[] = substr($siteNoScheme, 4);
+                } else {
+                    $siteVariants[] = 'www.' . $siteNoScheme;
+                }
+
+                foreach ($expanded as $pat) {
+                    foreach ($siteVariants as $siteCandidate) {
+                        if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD) && hash_equals($keyVal, $apiKey)) {
+                            return true;
+                        }
+                    }
+                }
             }
         }
 
@@ -86,8 +241,47 @@ class SiteKey
                 include $legacy;
             } catch (\Throwable $e) {
             }
-            if (isset($sitichiavi) && is_array($sitichiavi) && isset($sitichiavi[$site]) && hash_equals($sitichiavi[$site], $apiKey)) {
-                return true;
+            if (isset($sitichiavi) && is_array($sitichiavi)) {
+                if (isset($sitichiavi[$site]) && hash_equals($sitichiavi[$site], $apiKey)) {
+                    return true;
+                }
+                foreach ($sitichiavi as $pattern => $keyVal) {
+                    if (strpos($pattern, '*') === false) continue;
+                    $patternNoScheme = preg_replace('#^https?://#i', '', rtrim($pattern, '/'));
+                    $patternsToTest = [$patternNoScheme];
+                    if (strpos($patternNoScheme, '*.') !== false) {
+                        $alt = str_replace('*.', '', $patternNoScheme);
+                        if ($alt !== $patternNoScheme) $patternsToTest[] = $alt;
+                    }
+                    $expanded = [];
+                    foreach ($patternsToTest as $p) {
+                        $expanded[] = $p;
+                        if (substr($p, -2) === '/*') {
+                            $expanded[] = substr($p, 0, -2);
+                        }
+                        if (strpos($p, '*') === false && strpos($p, 'www.') !== 0) {
+                            $expanded[] = 'www.' . $p;
+                            if (substr($p, -2) === '/*') {
+                                $expanded[] = 'www.' . substr($p, 0, -2);
+                            }
+                        }
+                    }
+
+                    $siteVariants = [$siteNoScheme];
+                    if (strpos($siteNoScheme, 'www.') === 0) {
+                        $siteVariants[] = substr($siteNoScheme, 4);
+                    } else {
+                        $siteVariants[] = 'www.' . $siteNoScheme;
+                    }
+
+                    foreach ($expanded as $pat) {
+                        foreach ($siteVariants as $siteCandidate) {
+                            if (fnmatch($pat, $siteCandidate, FNM_CASEFOLD) && hash_equals($keyVal, $apiKey)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
             }
         }
 

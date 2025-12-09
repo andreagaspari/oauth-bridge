@@ -1,11 +1,12 @@
 <?php
 /**
- * Bootstrap dell'applicazione OAuth Proxy Bridge
- * - Carica l'autoload di Composer
- * - Carica le variabili d'ambiente da .env
- * - Inizializza la sessione in modo sicuro
- * - Carica la configurazione di `config/` se presente
- * - Prepara una variabile `$router` (fallback se la classe non è ancora implementata)
+ * Bootstrap file for OAuth Proxy Bridge
+ * This file initializes the application by:
+ * - Loading Composer's autoload
+ * - Loading environment variables from .env
+ * - Starting a secure session
+ * - Loading configuration from `config/` if available
+ * - Preparing a `$router` variable (fallback if the class is not yet implemented)
  *
  * @since 0.0.1
  * @package OAuthProxyBridge
@@ -22,7 +23,7 @@ $vendorAutoload = __DIR__ . '/vendor/autoload.php';
 if (file_exists($vendorAutoload)) {
 	require $vendorAutoload;
 } else {
-	// Non interrompiamo l'esecuzione: l'ambiente di sviluppo potrebbe non aver eseguito ancora `composer install`.
+	// Do not interrupt execution: the development environment might not have run `composer install` yet.
 	error_log('Composer autoload non trovato. Esegui `composer install`.');
 }
 
@@ -36,35 +37,37 @@ if (class_exists(\Dotenv\Dotenv::class)) {
 	}
 }
 
-// Carica config se presente
+// Load configuration if available
 if (file_exists(__DIR__ . '/config/config.php')) {
 	require_once __DIR__ . '/config/config.php';
 }
 
-// Sessione sicura (solo se non già avviata)
+// Secure session (only if not already started)
 if (session_status() !== PHP_SESSION_ACTIVE) {
 	$cookieParams = session_get_cookie_params();
 	// Choose secure flag: prefer explicit env var, fall back to HTTPS detection (including proxy header)
 	$secure = isset($_ENV['SESSION_SECURE']) ? filter_var($_ENV['SESSION_SECURE'], FILTER_VALIDATE_BOOLEAN) : (!empty($_SERVER['HTTPS']) || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https'));
-	// Use SameSite=None to allow modern cross-site OAuth redirects. Requires Secure to be true in browsers.
+	// Choose SameSite depending on whether cookie is Secure.
+	// Browsers require SameSite=None to be paired with Secure=true; use 'Lax' for local/dev HTTP.
+	$samesite = $secure ? 'None' : 'Lax';
 	session_set_cookie_params([
 		'lifetime' => $cookieParams['lifetime'],
 		'path' => $cookieParams['path'],
 		'domain' => $cookieParams['domain'],
 		'secure' => $secure,
 		'httponly' => true,
-		'samesite' => 'None'
+		'samesite' => $samesite
 	]);
 	session_start();
 }
 
-// Prepara una variabile router: se la classe Core\Router non esiste ancora, fornisco un fallback minimal
+// Prepare a router variable: if the Core\Router class does not exist yet, provide a minimal fallback
 /** @var Router|null $router */
 $router = null; // typed via use Router where available
 if (class_exists(Router::class)) {
 	$router = new Router();
 } else {
-	// Fallback/router minimale che evita fatal error quando si esegue l'app prima dell'implementazione completa
+	// Minimal fallback router to avoid fatal error when running the app before full implementation
 	$router = new class {
 		public function dispatch()
 		{
@@ -74,7 +77,7 @@ if (class_exists(Router::class)) {
 	};
 }
 
-// Carica le rotte se presenti
+// Load routes if available
 if (file_exists(__DIR__ . '/routes.php')) {
 	require_once __DIR__ . '/routes.php';
 }

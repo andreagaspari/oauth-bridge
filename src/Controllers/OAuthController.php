@@ -31,6 +31,34 @@ class OAuthController
     }
 
     /**
+     * Render an error response: HTML via central layout for browser clients,
+     * or JSON for API clients.
+     *
+     * @param Request $request
+     * @param Response $response
+     * @param int $code
+     * @param string $errorKey
+     * @param string $message
+     * @param string|null $title
+     * @return void
+     */
+    private function errorResponse(Request $request, Response $response, int $code, string $errorKey, string $message, ?string $title = null): void
+    {
+        if ($request->acceptsHtml()) {
+            $statusCode = $code;
+            $title = $title ?? ($code . ' — Errore');
+            $message = $message;
+            // Include central layout which will decide JSON vs HTML. For HTML path
+            // it will render the page; for API callers the layout would output JSON.
+            require __DIR__ . '/../../views/errors/errors-layout.php';
+            return;
+        }
+
+        $payload = ['ok' => false, 'error' => $errorKey, 'message' => $message];
+        $response->status($code)->json($payload);
+    }
+
+    /**
      * Start the authorization flow for a provider.
      *
      * @param Request $request
@@ -56,18 +84,18 @@ class OAuthController
         $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
 
         if (!$provider || !$site || !$apiKey) {
-            $response->status(400)->send('Missing parameters');
+            $this->errorResponse($request, $response, 400, 'missing_parameters', 'Mancano parametri obbligatori.', '400 — Parametri mancanti');
             return;
         }
 
         if (!SiteKey::validate(rtrim((string)$site, '/'), (string)$apiKey, $provider)) {
-            $response->status(403)->send('API key validation failed');
+            $this->errorResponse($request, $response, 403, 'api_key_validation_failed', "API key non valida o non autorizzata.", '403 — Accesso negato');
             return;
         }
 
         $service = $this->services->get($provider);
         if (!$service) {
-            $response->status(404)->send('Provider not found');
+            $this->errorResponse($request, $response, 404, 'provider_not_found', 'Provider non trovato.', '404 — Provider non trovato');
             return;
         }
 
@@ -453,18 +481,18 @@ class OAuthController
         $apiKey = $request->post('oauth_bridge_api_key', $request->get('oauth_bridge_api_key'));
 
         if (!$provider || !$refreshToken || !$site || !$apiKey) {
-            $response->status(400)->send('Missing parameters');
+            $this->errorResponse($request, $response, 400, 'missing_parameters', 'Mancano parametri obbligatori.', '400 — Parametri mancanti');
             return;
         }
 
         if (!SiteKey::validate(rtrim((string)$site, '/'), (string)$apiKey, $provider)) {
-            $response->status(403)->send('API key validation failed');
+            $this->errorResponse($request, $response, 403, 'api_key_validation_failed', "API key non valida o non autorizzata.", '403 — Accesso negato');
             return;
         }
 
         $service = $this->services->get($provider);
         if (!$service) {
-            $response->status(404)->send('Provider not found');
+            $this->errorResponse($request, $response, 404, 'provider_not_found', 'Provider non trovato.', '404 — Provider non trovato');
             return;
         }
 
@@ -551,7 +579,7 @@ class OAuthController
     {
         $token = $request->get('token') ?? null;
         if (!$token) {
-            $response->status(400)->send('Missing token');
+            $this->errorResponse($request, $response, 400, 'missing_token', 'Token mancante.', '400 — Token mancante');
             return;
         }
 
@@ -562,19 +590,19 @@ class OAuthController
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$row) {
-                $response->status(404)->send('Token not found');
+                $this->errorResponse($request, $response, 404, 'token_not_found', 'Token non trovato.', '404 — Token non trovato');
                 return;
             }
 
             if (!empty($row['used'])) {
-                $response->status(400)->send('Token already used');
+                $this->errorResponse($request, $response, 400, 'token_used', 'Token già utilizzato.', '400 — Token già utilizzato');
                 return;
             }
 
             $now = new \DateTime('now');
             $expires = new \DateTime($row['expires_at']);
             if ($now > $expires) {
-                $response->status(400)->send('Token expired');
+                $this->errorResponse($request, $response, 400, 'token_expired', 'Token scaduto.', '400 — Token scaduto');
                 return;
             }
 
@@ -613,14 +641,14 @@ class OAuthController
 
             $service = $this->services->get($row['provider']);
             if (!$service) {
-                $response->status(404)->send('Provider not found');
+                $this->errorResponse($request, $response, 404, 'provider_not_found', 'Provider non trovato.', '404 — Provider non trovato');
                 return;
             }
 
             $authUrl = $service->getAuthUrl(['state' => $row['state']]);
             $response->redirect($authUrl);
         } catch (\Throwable $e) {
-            $response->status(500)->send('Server error');
+            $this->errorResponse($request, $response, 500, 'server_error', 'Errore interno del server.', '500 — Errore interno');
         }
     }
 }

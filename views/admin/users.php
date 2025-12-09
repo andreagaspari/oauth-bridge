@@ -29,7 +29,31 @@ ob_start();
                 <form id="createUserFormModal">
                     <div class="c-field"><label class="c-field__label">Nome</label><input class="c-field__control" name="name" type="text"></div>
                     <div class="c-field"><label class="c-field__label">Email</label><input class="c-field__control" name="email" type="email" required></div>
-                    <div class="c-field"><label class="c-field__label">Password</label><input class="c-field__control" name="password" type="password"></div>
+                    <div class="c-field">
+                        <label class="c-field__label">Password</label>
+                        <div class="c-input-group">
+                            <input class="c-field__control" name="password" type="password">
+                            <div class="c-input-addon">
+                                <button type="button" class="c-icon-btn js-toggle-password" aria-label="Mostra password">
+                                    <?php /* SVGs will be inlined via the button content to match other views; JS will only set ids/targets */ ?>
+                                    <?php echo Svg::inline('eye-open.svg', ['class' => 'svg-eye svg-eye--open']); ?>
+                                    <?php echo Svg::inline('eye-closed.svg', ['class' => 'svg-eye svg-eye--closed']); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="c-field">
+                        <label class="c-field__label">Conferma Password</label>
+                        <div class="c-input-group">
+                            <input class="c-field__control" name="password_confirm" type="password">
+                            <div class="c-input-addon">
+                                <button type="button" class="c-icon-btn js-toggle-password" aria-label="Mostra password">
+                                    <?php echo Svg::inline('eye-open.svg', ['class' => 'svg-eye svg-eye--open']); ?>
+                                    <?php echo Svg::inline('eye-closed.svg', ['class' => 'svg-eye svg-eye--closed']); ?>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <div class="c-field"><label class="c-field__label"><input name="is_admin" type="checkbox"> Amministratore</label></div>
                     <div style="margin-top:8px"><button class="c-btn c-btn--primary" type="submit">Salva</button></div>
                 </form>
