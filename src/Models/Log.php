@@ -323,7 +323,7 @@ class Log
      *
      * @param int $months
      * @return int|false
-     * @since 0.0.1
+     * @since 0.1.01
      */
     public static function cleanupOlderThanMonths(int $months)
     {
