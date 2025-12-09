@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', function(){
               toggleBtn.addEventListener('click', function(){
                 const label = k.name || k.site_url || k.id || 'chiave';
                 if (window.Modal && typeof window.Modal.confirm === 'function'){
-                  window.Modal.confirm('Revocare la chiave '+label+'?<br/> Questa operazione disattiverà definitivamente la chiave e sarà necessario rigenerarne una nuova per riattivarla.', function(){ doRevoke(); });
+                  window.Modal.confirm('Revocare la chiave '+label+'?<br/><br/>Questa operazione disattiverà definitivamente la chiave e sarà necessario rigenerarne una nuova per riattivarla.', function(){ doRevoke(); }, { allowHtml: true });
                 } else {
                   if (!confirm('Revocare la chiave '+label+'?')) return; doRevoke();
                 }
@@ -322,10 +322,11 @@ document.addEventListener('DOMContentLoaded', function(){
             const del = document.createElement('button'); del.textContent='Elimina'; del.setAttribute('aria-label','Elimina chiave '+k.id); del.className='c-btn c-btn--danger';
             const label = k.name || k.site_url || k.id || 'chiave';
             del.addEventListener('click', async function(){
+              const html = 'Eliminare la chiave '+label+'?<br/><br/>Una volta eliminata non sarà più possibile recuperarla e sarà necessario crearne una nuova.';
               if (window.Modal && typeof window.Modal.confirm === 'function'){
-                window.Modal.confirm('Eliminare chiave '+label+'?', async function(){ await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys(); });
+                window.Modal.confirm(html, async function(){ await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys(); }, { allowHtml: true });
               } else {
-                if (!confirm('Eliminare chiave '+label+'?')) return; await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys();
+                if (!confirm('Eliminare la chiave '+label+'?\n\nUna volta eliminata non sarà più possibile recuperarla e sarà necessario crearne una nuova.')) return; await fetch('/admin/keys/'+k.id+'/delete', { method:'POST', credentials:'same-origin' }); loadKeys();
               }
             });
             cell.appendChild(del);
@@ -382,8 +383,35 @@ document.addEventListener('DOMContentLoaded', function(){
       };
       try{
         const res = await fetch('/admin/keys', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload), credentials: 'same-origin' });
-        if(res.ok){ window.showToast && window.showToast('Chiave creata', { type:'success' }); loadKeys(); window.Modal && window.Modal.close(); }
-        else { const j = await res.json(); window.showToast && window.showToast('Errore: '+(j.error||'sconosciuto'), { type:'danger' }); }
+        if(res.ok){
+          const j = await res.json().catch(()=> ({}));
+          window.showToast && window.showToast('Chiave creata', { type:'success' });
+          // open modal with created key if provided (same UI as regenerate)
+          if(j && j.api_key){
+            const wrapper = document.createElement('div'); wrapper.className = 'c-field';
+            const label = document.createElement('label'); label.className='c-field__label'; label.textContent = 'Nuova chiave';
+            const ig = document.createElement('div'); ig.className = 'c-input-group';
+            const input = document.createElement('input'); input.className = 'c-field__control'; input.type = 'text'; input.readOnly = true; input.value = j.api_key;
+            input.style.fontFamily = 'monospace';
+            const addon = document.createElement('div'); addon.className = 'c-input-addon';
+            const copyBtn = document.createElement('button'); copyBtn.type='button'; copyBtn.className='c-btn c-icon-btn'; copyBtn.setAttribute('aria-label','Copia chiave e chiudi');
+            ensureInlineSvg('/assets/imgs/copy.svg', copyBtn);
+            copyBtn.addEventListener('click', function(){
+              if(navigator.clipboard){ navigator.clipboard.writeText(input.value).then(()=>{ window.showToast && window.showToast('Copiato', {type:'success'}); window.Modal && window.Modal.close(); }).catch(()=>{ window.showToast && window.showToast('Copia fallita', {type:'danger'}); });
+              } else { try{ const ta = document.createElement('textarea'); ta.value = input.value; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); window.showToast && window.showToast('Copiato', {type:'success'}); window.Modal && window.Modal.close(); }catch(e){ window.showToast && window.showToast('Copia fallita', {type:'danger'}); } }
+            });
+            addon.appendChild(copyBtn);
+            ig.appendChild(input); ig.appendChild(addon);
+            wrapper.appendChild(label); wrapper.appendChild(ig);
+            window.Modal && window.Modal.open(wrapper, { title: 'Nuova chiave creata' });
+            // auto-select the generated key for quick copy
+            setTimeout(()=>{ try{ input.select(); }catch(e){} }, 50);
+            loadKeys();
+          } else {
+            loadKeys();
+            window.Modal && window.Modal.close();
+          }
+        } else { const j = await res.json(); window.showToast && window.showToast('Errore: '+(j.error||'sconosciuto'), { type:'danger' }); }
       }catch(err){ window.showToast && window.showToast('Errore di rete', { type:'danger' }); }
     });
     window.Modal && window.Modal.open(node, { title: 'Crea chiave' });
