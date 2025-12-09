@@ -1,5 +1,13 @@
 #!/usr/bin/env php
 <?php
+// Prevent accidental execution via web (only allow CLI)
+if (php_sapi_name() !== 'cli') {
+    if (!headers_sent()) {
+        header('HTTP/1.1 403 Forbidden');
+    }
+    echo "Forbidden\n";
+    exit(1);
+}
 // CLI script to cleanup logs older than N months (default 3)
 // Usage: bin/cleanup-logs [months]
 
