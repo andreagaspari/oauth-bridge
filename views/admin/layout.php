@@ -44,7 +44,7 @@ $version = 'v0.0.01';
           <?php echo Svg::inline('menu.svg', ['class'=>'hamburger-icon c-icon','aria-hidden'=>'true']); ?>
           <span class="sr-only">Menu</span>
         </button>
-        <h1 class="admin-header__title">OAuth 2.0 Server Admin</h1>
+        <h1 class="admin-header__title">OAuth 2.0 Pryoxy Bridge Admin</h1>
       </div>
       <div class="right top-actions">
           <span class="welcome-msg">Bentornato, <?php echo htmlspecialchars($userName); ?></span>

@@ -29,7 +29,7 @@
   <div class="login-shell">
     <div class="login-card c-card" role="region" aria-label="Login amministrazione">
       <div class="c-card__header mb-2g">
-        <h1 class="c-card__title w-100">OAuth 2.0 Server</h1>
+        <h1 class="c-card__title w-100">OAuth 2.0 Proxy Bridge</h1>
         <h2 class="c-card__subtitle w-100">Pannello di amministrazione</h2>
       </div>
 
